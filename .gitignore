@@ -1,0 +1,42 @@
+# --- Terraform ---
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# 변수 파일에는 이메일 등 개인정보가 들어갑니다
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# 백엔드 설정에는 계정 ID 가 들어갑니다
+backend.hcl
+
+# override 파일
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# .terraform.lock.hcl 은 커밋합니다 (프로바이더 버전 고정 = 재현 가능한 빌드)
+# 아래 줄을 절대 추가하지 마세요:
+# .terraform.lock.hcl
+
+# --- 자격증명 / 시크릿 ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials
+
+# --- 도구 산출물 ---
+.DS_Store
+*.log
+node_modules/
+dist/
+public/
+resources/_gen/
+.hugo_build.lock
+reports/

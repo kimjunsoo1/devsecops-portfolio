@@ -1,0 +1,59 @@
+# 1주차 CI — 아직 최소 구성입니다.
+# 3주차에 Semgrep / Trivy / SARIF 업로드, 4주차에 Checkov / Conftest 가 여기 붙습니다.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# 기본 권한을 읽기로 좁힙니다. 필요한 잡에서만 늘립니다.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: 시크릿 스캔
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks 가 커밋 히스토리 전체를 봐야 합니다
+          fetch-depth: 0
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 퍼블릭 리포지토리는 라이선스 없이 무료입니다.
+
+  terraform:
+    name: Terraform 정적 검사
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [bootstrap, guardrails]
+    defaults:
+      run:
+        working-directory: terraform/${{ matrix.stack }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.0"
+
+      - name: fmt
+        run: terraform fmt -check -recursive -diff
+
+      - name: init (백엔드 없이)
+        run: terraform init -backend=false
+
+      - name: validate
+        run: terraform validate -no-color

@@ -1,0 +1,10 @@
+# terraform.tfvars 로 복사해서 채우세요. (.gitignore 에 있음)
+
+owner       = "your-github-id"
+alert_email = "you@example.com"
+
+# 월 예산 상한(USD). 50 이면 $25/$40 에서 실제 비용 알림, $50 예측 시 알림.
+monthly_budget_usd = 50
+
+# 일 예산 상한(USD). 하루에 이만큼 넘으면 바로 알림.
+daily_budget_usd = 3

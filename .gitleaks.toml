@@ -1,0 +1,24 @@
+# gitleaks 기본 룰셋을 그대로 쓰고, 예제 파일만 예외 처리합니다.
+# 예외를 늘리기 전에 "정말 시크릿이 아닌가" 를 먼저 확인하세요.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "aws-account-id-in-repo"
+description = "AWS 계정 ID 가 코드에 하드코딩됨"
+regex = '''(?i)(aws_account_id|account_id)\s*[:=]\s*["']?[0-9]{12}["']?'''
+tags = ["aws", "account-id"]
+
+[allowlist]
+description = "예제/문서 파일"
+paths = [
+  '''.*\.example$''',
+  '''.*\.md$''',
+  '''\.gitleaks\.toml''',
+]
+regexes = [
+  '''123456789012''',
+  '''you@example\.com''',
+  '''your-github-id''',
+]

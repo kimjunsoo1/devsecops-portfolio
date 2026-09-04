@@ -1,0 +1,8 @@
+# bootstrap 의 `terraform output backend_hcl` 결과를 backend.hcl 로 저장하세요.
+# backend.hcl 은 계정 ID 를 담고 있어 .gitignore 에 있습니다.
+#
+# bucket       = "devsecops-portfolio-tfstate-123456789012"
+# key          = "guardrails/terraform.tfstate"
+# region       = "ap-northeast-2"
+# encrypt      = true
+# use_lockfile = true
