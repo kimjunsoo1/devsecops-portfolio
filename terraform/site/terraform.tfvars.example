@@ -1,0 +1,8 @@
+# terraform.tfvars 로 복사해서 채우세요. (.gitignore 에 있음)
+
+owner        = "your-github-id"
+github_owner = "your-github-id"
+github_repo  = "devsecops-portfolio"
+
+# 배포를 허용할 브랜치
+# deploy_branch = "main"

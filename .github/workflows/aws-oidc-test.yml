@@ -1,0 +1,32 @@
+# 모듈 2 검증용 워크플로.
+# AWS 자격증명을 하나도 저장하지 않고 AWS 에 로그인되는지만 확인합니다.
+# 모듈 4 에서 실제 배포 워크플로가 생기면 이 파일은 지워도 됩니다.
+
+name: aws-oidc-test
+
+on:
+  workflow_dispatch:
+
+# id-token: write 가 없으면 GitHub 이 OIDC 토큰을 발급하지 않습니다.
+# 이 두 줄이 이 워크플로에서 가장 중요한 부분입니다.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  whoami:
+    name: AWS 신원 확인
+    runs-on: ubuntu-latest
+    steps:
+      - name: AWS 자격증명 획득 (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-northeast-2
+          role-session-name: gha-${{ github.run_id }}
+
+      - name: 나는 누구인가
+        run: |
+          aws sts get-caller-identity
+          echo "---"
+          echo "이 자격증명은 약 1시간 뒤 만료되며 어디에도 저장되지 않습니다."
