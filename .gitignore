@@ -40,3 +40,7 @@ public/
 resources/_gen/
 .hugo_build.lock
 reports/
+
+# plan 산출물 — 리소스 속성이 평문으로 들어갑니다
+*.tfplan
+tfplan
