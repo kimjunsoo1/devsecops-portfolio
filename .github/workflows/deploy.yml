@@ -1,0 +1,74 @@
+# 정적 사이트 배포.
+#
+# main 에 site/ 변경이 들어오면 빌드해서 S3 에 올리고 CloudFront 캐시를 비웁니다.
+# AWS 자격증명은 저장하지 않습니다 - OIDC 로 매 실행마다 새로 받습니다.
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# 배포가 겹치면 순서가 꼬입니다. 앞 배포가 끝날 때까지 기다립니다.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 빌드 후 배포
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      # npm install 이 아니라 npm ci 입니다.
+      # package-lock.json 을 그대로 따르므로 로컬과 CI 의 의존성이 갈리지 않습니다.
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 빌드
+        run: npm run build
+
+      - name: AWS 자격증명 획득 (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ap-northeast-2
+          role-session-name: deploy-${{ github.run_id }}
+
+      # 해시가 붙은 자산(/_astro/*)은 내용이 바뀌면 파일명이 바뀝니다.
+      # 그래서 1년 캐시에 immutable 을 걸어도 안전합니다.
+      - name: 자산 업로드 (긴 캐시)
+        run: |
+          aws s3 sync dist/ "s3://${{ secrets.AWS_SITE_BUCKET }}/" --delete --cache-control "public,max-age=31536000,immutable" --exclude "*.html" --exclude "*.xml" --exclude "*.txt"
+
+      # HTML 은 주소가 그대로이므로 캐시하면 안 됩니다.
+      # --delete 는 필터 범위 안에서만 동작하므로 위에서 올린 자산은 지워지지 않습니다.
+      - name: HTML 업로드 (캐시 없음)
+        run: |
+          aws s3 sync dist/ "s3://${{ secrets.AWS_SITE_BUCKET }}/" --delete --cache-control "public,max-age=0,must-revalidate" --exclude "*" --include "*.html" --include "*.xml" --include "*.txt"
+
+      - name: CloudFront 캐시 무효화
+        run: |
+          aws cloudfront create-invalidation --distribution-id "${{ secrets.AWS_DISTRIBUTION_ID }}" --paths "/*"
+
+      - name: 배포 결과
+        run: echo "배포 완료 - https://${{ secrets.AWS_DISTRIBUTION_DOMAIN }}"
