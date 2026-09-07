@@ -11,6 +11,6 @@ output "deploy_role_arn" {
 }
 
 output "trusted_subject" {
-  description = "이 역할이 신뢰하는 정확한 GitHub 주체"
-  value       = "repo:${var.github_owner}/${var.github_repo}:ref:refs/heads/${var.deploy_branch}"
+  description = "이 역할이 신뢰하는 정확한 sub 클레임. 워크플로 로그의 값과 일치해야 합니다."
+  value       = local.github_subject
 }

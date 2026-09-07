@@ -4,5 +4,11 @@ owner        = "your-github-id"
 github_owner = "your-github-id"
 github_repo  = "devsecops-portfolio"
 
+# 아래 두 값은 명령으로 확인합니다:
+#   gh api /users/<owner> --jq .id
+#   gh api /repos/<owner>/<repo> --jq .id
+github_owner_id = "000000"
+github_repo_id  = "0000000000"
+
 # 배포를 허용할 브랜치
 # deploy_branch = "main"
