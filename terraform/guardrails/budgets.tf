@@ -6,6 +6,11 @@ resource "aws_sns_topic" "billing_alerts" {
   name = "${var.project}-billing-alerts"
 
   # SNS 주제 자체는 무료이고, 이메일 발송도 월 1,000건까지 무료입니다.
+
+  # 저장 시 암호화. alias/aws/sns 는 AWS 관리형 키라 월 키 요금이 없고,
+  # 이 주제는 한 달에 알림 몇 건만 처리하므로 요청 요금도 사실상 0 입니다.
+  # Trivy AWS-0095 (high) 대응.
+  kms_master_key_id = "alias/aws/sns"
 }
 
 resource "aws_sns_topic_subscription" "billing_email" {
