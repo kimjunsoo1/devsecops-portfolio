@@ -1,0 +1,19 @@
+# 2주차 증적 — 키 없는 배포 파이프라인
+생성 시각: 2026-09-09T10:19:50+09:00
+
+## GitHub 시크릿 — 자격증명 없음, 전부 식별자
+AWS_DEPLOY_ROLE_ARN	2026-09-04
+AWS_DISTRIBUTION_DOMAIN	2026-09-07
+AWS_DISTRIBUTION_ID	2026-09-07
+AWS_SITE_BUCKET	2026-09-07
+
+## 사이트 응답
+  홈           : 200
+  /blog/       : 200
+  없는 페이지  : 404
+
+## 보안 헤더
+x-frame-options: SAMEORIGIN
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+strict-transport-security: max-age=31536000
