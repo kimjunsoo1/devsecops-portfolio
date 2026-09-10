@@ -50,3 +50,15 @@ misconfigurations:
       + SSE-S3 로 위협 모델을 커버한다고 판단했다.
       계정에 사람이 늘면 즉시 재검토한다.
     expired_at: 2027-03-01
+
+  - id: AWS-0136
+    paths:
+      - "terraform/guardrails/budgets.tf"
+    statement: >-
+      AWS-0095(미암호화) 대응으로 alias/aws/sns 를 적용했더니 이번엔
+      "고객 관리 키가 아니다"로 잡힌다. CMK 로 가면 월 $1 + 요청 과금이 붙는다.
+      다만 이 선택은 6주차에 어차피 다시 해야 한다 - AWS 관리형 키는
+      키 정책을 수정할 수 없어서 CloudWatch 알람이 이 주제로 발행하지 못한다.
+      알람을 배선하는 시점에 CMK 도입 여부를 한 번에 결정한다.
+      docs/security-backlog.md 참조.
+    expired_at: 2026-11-01
