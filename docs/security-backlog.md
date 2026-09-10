@@ -34,3 +34,17 @@ CloudFront 기본 인증서를 쓰는 동안에는 `minimum_protocol_version` �
 실제 노출은 제한적입니다. CloudFront 기본 인증서도 TLS 1.2/1.3 을 지원하며,
 `TLSv1` 은 그보다 낮은 버전으로도 접속할 수 있다는 뜻입니다.
 현대 브라우저는 모두 1.2 이상을 씁니다.
+
+## SNS 암호화와 CloudWatch 알람의 충돌 (6주차에 결정)
+
+AWS-0095 대응으로 SNS 주제에 `alias/aws/sns` 암호화를 걸었다.
+그런데 이 키는 AWS 관리형이라 키 정책을 수정할 수 없고,
+CloudWatch 알람이 발행하려면 `cloudwatch.amazonaws.com` 에
+`kms:GenerateDataKey*` 가 필요하다. 알람은 에러 없이 조용히 실패한다.
+
+현재는 예산 알림이 SNS 를 거치지 않고 이메일로 직접 가므로 영향이 없다.
+6주차에 알람을 배선할 때 셋 중 하나를 고른다.
+
+- 고객 관리 KMS 키 (월 $1 + 요청 과금)
+- 암호화 해제 후 AWS-0095 를 사유와 함께 억제
+- SNS 없이 이메일 직접 전송
