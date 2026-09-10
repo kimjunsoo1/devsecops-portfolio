@@ -1,0 +1,84 @@
+# 액션을 커밋 SHA 로 고정하면 자동 업데이트가 멈춥니다.
+# 고정된 채로 방치하면 보안 패치가 나와도 반영되지 않아서,
+# "옮길 수 없는 태그" 대신 "낡은 코드"라는 다른 문제가 생깁니다.
+#
+# Dependabot 이 그 자리를 메웁니다. `# v4` 주석을 읽어서
+# 새 버전이 나오면 SHA 와 주석을 함께 올리는 PR 을 엽니다.
+#
+# 즉 고정과 자동 갱신은 반대가 아니라 한 쌍입니다.
+
+version: 2
+
+updates:
+  # --- GitHub Actions ---
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(actions)"
+    labels:
+      - dependencies
+      - github-actions
+
+  # --- Astro / npm ---
+  - package-ecosystem: npm
+    directory: /site
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(npm)"
+    labels:
+      - dependencies
+      - npm
+    # 사소한 업데이트가 PR 을 도배하지 않도록 묶습니다.
+    # 보안 패치는 이 그룹과 무관하게 별도 PR 로 즉시 옵니다.
+    groups:
+      astro:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  # --- Terraform ---
+  - package-ecosystem: terraform
+    directory: /terraform/bootstrap
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(tf)"
+    labels:
+      - dependencies
+      - terraform
+
+  - package-ecosystem: terraform
+    directory: /terraform/guardrails
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(tf)"
+    labels:
+      - dependencies
+      - terraform
+
+  - package-ecosystem: terraform
+    directory: /terraform/site
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "chore(tf)"
+    labels:
+      - dependencies
+      - terraform
