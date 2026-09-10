@@ -1,0 +1,9 @@
+{
+  "name": "security-test-fixture",
+  "version": "0.0.0",
+  "description": "침투 테스트용. 설치하거나 배포하지 마세요.",
+  "private": true,
+  "dependencies": {
+    "lodash": "4.17.20"
+  }
+}
