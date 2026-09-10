@@ -26,6 +26,16 @@ resource "aws_s3_bucket_public_access_block" "trail" {
   restrict_public_buckets = true
 }
 
+# 감사 로그는 덮어쓰기나 삭제로 지워질 수 있으면 감사 로그가 아닙니다.
+# 버전 관리로 이전 객체를 남깁니다. Trivy AWS-0090 (medium) 대응.
+resource "aws_s3_bucket_versioning" "trail" {
+  bucket = aws_s3_bucket.trail.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "trail" {
   bucket = aws_s3_bucket.trail.id
 
@@ -49,6 +59,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "trail" {
 
     expiration {
       days = var.cloudtrail_retention_days
+    }
+
+    # 버전 관리를 켰으므로 이전 버전도 같이 정리해야 스토리지가 안 쌓입니다.
+    noncurrent_version_expiration {
+      noncurrent_days = var.cloudtrail_retention_days
     }
 
     abort_incomplete_multipart_upload {

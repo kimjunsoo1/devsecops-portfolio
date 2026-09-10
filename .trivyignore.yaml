@@ -1,0 +1,64 @@
+# Trivy 억제 목록.
+#
+# 여기 들어오는 조건은 하나입니다: "왜 수용하는가"를 적을 수 있을 것.
+# ID 만 나열하는 억제 파일은 스캐너를 끄는 것과 같습니다.
+#
+# expired_at 이 지나면 그 항목은 다시 발견 사항으로 올라옵니다.
+# 영구 면제가 아니라 "이 시점에 다시 판단한다"는 약속입니다.
+#
+# 여기 없는 HIGH/CRITICAL 은 PR 을 막습니다.
+
+misconfigurations:
+  - id: AWS-0011
+    paths:
+      - "terraform/site/cloudfront.tf"
+    statement: >-
+      CloudFront 앞단 WAF 미적용. 수용이 아니라 순서 문제로,
+      6주차 런타임 보안 작업에서 적용 예정(Web ACL $5 + 룰 $2/월).
+      그 전까지는 정적 콘텐츠만 서빙하므로 주입 공격면이 없고,
+      비용 폭주는 1주차 일/월 예산 알림이 잡는다.
+    expired_at: 2026-11-01
+
+  - id: AWS-0015
+    paths:
+      - "terraform/guardrails/cloudtrail.tf"
+    statement: >-
+      CloudTrail 로그를 고객 관리 KMS 키로 암호화하지 않고 SSE-S3 를 쓴다.
+      CMK 는 키당 월 $1 에 요청당 과금이 붙는데, 이 계정은 1인 사용이라
+      "키 정책으로 로그 접근을 분리한다"는 CMK 의 실익이 없다.
+      로그 무결성은 log file validation 해시 체인으로 확보한다.
+      다인 계정이 되면 가장 먼저 바꿀 항목.
+    expired_at: 2027-03-01
+
+  - id: AWS-0132
+    paths:
+      - "terraform/site/s3.tf"
+    statement: >-
+      사이트 원본 버킷. 담기는 것은 어차피 전 세계에 공개될 정적 파일이라
+      기밀성 요구가 없다. SSE-S3(AES256)로 저장 시 암호화는 충족한다.
+      CMK 비용을 쓸 이유가 없다.
+    expired_at: 2027-03-01
+
+  - id: AWS-0132
+    paths:
+      - "terraform/bootstrap/main.tf"
+      - "terraform/guardrails/cloudtrail.tf"
+    statement: >-
+      Terraform 상태 버킷과 감사 로그 버킷. 여기에는 민감할 수 있는 값이
+      들어가므로 CMK 가 이론적으로는 맞다. 다만 1인 계정에서는
+      키 정책으로 접근을 나눌 상대가 없고, 버킷 정책 + 계정 수준 퍼블릭 차단
+      + SSE-S3 로 위협 모델을 커버한다고 판단했다.
+      계정에 사람이 늘면 즉시 재검토한다.
+    expired_at: 2027-03-01
+
+  - id: AWS-0136
+    paths:
+      - "terraform/guardrails/budgets.tf"
+    statement: >-
+      AWS-0095(미암호화) 대응으로 alias/aws/sns 를 적용했더니 이번엔
+      "고객 관리 키가 아니다"로 잡힌다. CMK 로 가면 월 $1 + 요청 과금이 붙는다.
+      다만 이 선택은 6주차에 어차피 다시 해야 한다 - AWS 관리형 키는
+      키 정책을 수정할 수 없어서 CloudWatch 알람이 이 주제로 발행하지 못한다.
+      알람을 배선하는 시점에 CMK 도입 여부를 한 번에 결정한다.
+      docs/security-backlog.md 참조.
+    expired_at: 2026-11-01

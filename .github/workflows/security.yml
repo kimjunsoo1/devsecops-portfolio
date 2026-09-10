@@ -1,11 +1,14 @@
-# 3주차 모듈 1 — 보안 스캔 결과를 GitHub Security 탭으로 흘려보냅니다.
+# 3주차 모듈 2 — 스캔을 게이트로 승격합니다.
 #
-# 이 단계는 "보이게 만드는" 것까지만 합니다. 아직 게이트가 아닙니다.
-# 발견 사항이 있어도 PR 은 막히지 않습니다 - 모듈 2 에서 승격합니다.
+# 차단 기준: docs/security-policy.md
+#   gitleaks - 발견 시 무조건 차단 (ci.yml)
+#   Semgrep  - ERROR 등급만 차단
+#   Trivy    - HIGH/CRITICAL 만 차단, .trivyignore.yaml 로 수용한 항목 제외
 #
-# 먼저 전체 그림을 보고, 무엇을 차단할지 그다음에 정하는 순서입니다.
-# 처음부터 막아버리면 기존 코드의 지적사항 수십 개에 파묻혀서
-# 결국 전부 무시하게 됩니다.
+# 리포트 파일은 워크스페이스가 아니라 runner.temp 에 씁니다.
+# 리포지토리 안에 두면 뒤따르는 게이트 단계가 그 리포트를 스캔 대상으로 잡고,
+# 리포트에 들어 있는 룰 설명 텍스트에 자기 룰이 매칭되어 오탐이 납니다.
+# (SARIF 는 JSON 이고 YAML 은 JSON 의 상위집합이라 YAML 룰이 그대로 읽습니다.)
 
 name: security
 
@@ -17,7 +20,6 @@ on:
     # 매주 월요일 03:00 KST - 코드가 안 바뀌어도 새 취약점은 계속 나옵니다.
     - cron: '0 18 * * 0'
 
-# 기본은 읽기만. 필요한 잡에서만 권한을 늘립니다.
 permissions:
   contents: read
 
@@ -29,6 +31,13 @@ jobs:
       contents: read
       security-events: write
 
+    env:
+      SEMGREP_CONFIGS: >-
+        --config=p/security-audit
+        --config=p/secrets
+        --config=p/terraform
+        --config=p/github-actions
+
     steps:
       - uses: actions/checkout@v4
 
@@ -39,23 +48,24 @@ jobs:
       - name: Semgrep 설치
         run: pip install semgrep
 
-      # 룰셋은 목적별로 고릅니다.
-      #   p/security-audit  - 일반적인 취약 패턴
-      #   p/secrets         - 하드코딩된 자격증명
-      #   p/terraform       - IaC 오구성
-      #   p/github-actions  - 워크플로 자체의 취약점 (스크립트 인젝션 등)
-      #
-      # --metrics=off 로 텔레메트리를 끕니다.
-      - name: 스캔
+      # 1단계: 전체 결과를 SARIF 로 뽑아 Security 탭에 올립니다.
+      # 등급과 무관하게 전부 보이게 하는 것이 목적이므로 실패시키지 않습니다.
+      - name: 스캔 (리포트)
         run: |
-          semgrep scan --config=p/security-audit --config=p/secrets --config=p/terraform --config=p/github-actions --sarif --output=semgrep.sarif --metrics=off
+          semgrep scan $SEMGREP_CONFIGS --sarif --output="$RUNNER_TEMP/semgrep.sarif" --metrics=off
         continue-on-error: true
 
       - name: SARIF 업로드
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: semgrep.sarif
+          sarif_file: ${{ runner.temp }}/semgrep.sarif
           category: semgrep
+        if: always()
+
+      # 2단계: ERROR 등급만 게이트. 여기서 실패하면 PR 이 막힙니다.
+      - name: 게이트 (ERROR 등급)
+        run: |
+          semgrep scan $SEMGREP_CONFIGS --severity=ERROR --error --metrics=off
 
   deps:
     name: 의존성·설정 (Trivy)
@@ -78,15 +88,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      # vuln     - package-lock.json 의 취약한 패키지
-      # secret   - 커밋된 자격증명
-      # misconfig- Terraform / Dockerfile / 워크플로 오구성
-      - name: 스캔
+      # 1단계: 전체 결과를 Security 탭으로. 억제 목록을 적용하지 않습니다 -
+      # 수용한 항목도 계속 보이는 편이 낫습니다.
+      - name: 스캔 (리포트)
         run: |
-          trivy fs --scanners vuln,secret,misconfig --format sarif --output trivy.sarif --exit-code 0 .
+          trivy fs --scanners vuln,secret,misconfig --format sarif --output "$RUNNER_TEMP/trivy.sarif" --exit-code 0 .
 
       - name: SARIF 업로드
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: trivy.sarif
+          sarif_file: ${{ runner.temp }}/trivy.sarif
           category: trivy
+        if: always()
+
+      # 2단계: 게이트. 억제 목록에 없는 HIGH/CRITICAL 이 하나라도 있으면 실패합니다.
+      - name: 게이트 (HIGH/CRITICAL)
+        run: |
+          trivy fs --scanners vuln,secret,misconfig --ignorefile .trivyignore.yaml --severity HIGH,CRITICAL --exit-code 1 --format table .
