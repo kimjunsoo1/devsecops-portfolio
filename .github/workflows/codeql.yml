@@ -1,0 +1,55 @@
+# 애플리케이션 코드 분석.
+#
+# 3주차 침투 테스트에서 Semgrep OSS 가 JS 코드 취약점을 거의 못 잡는 것이
+# 드러났습니다. 관련 룰 상당수가 Semgrep Pro 로 빠져 있고, Pro 는 계정과
+# CI 토큰을 요구합니다.
+#
+# CodeQL 은 퍼블릭 리포지토리에서 무료이고 토큰이 필요 없으며,
+# 데이터플로 분석(사용자 입력이 위험한 함수까지 흘러가는 경로 추적)을 합니다.
+# 결과는 Semgrep·Trivy 와 같은 Security 탭으로 모입니다.
+#
+# 역할 분담:
+#   Semgrep  - Terraform, GitHub Actions, 시크릿 패턴
+#   CodeQL   - JavaScript / TypeScript 애플리케이션 코드
+#   Trivy    - 의존성 CVE, IaC 오구성
+#   gitleaks - 커밋 히스토리 시크릿
+
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # 매주 월요일 03:00 KST
+    - cron: '0 18 * * 0'
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL (JavaScript/TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: CodeQL 초기화
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          languages: javascript-typescript
+          # 기본 쿼리 대신 확장 보안 쿼리를 씁니다.
+          # 오탐이 조금 늘지만 명령 주입·코드 주입 계열 커버리지가 넓어집니다.
+          queries: security-extended
+
+      - name: 분석
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          category: "/language:javascript-typescript"
