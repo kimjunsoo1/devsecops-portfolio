@@ -22,14 +22,3 @@ provider "aws" {
     tags = local.common_tags
   }
 }
-
-# CloudFront 용 ACM 인증서와 WAF Web ACL 은 반드시 us-east-1 에 있어야 합니다.
-# 2주차에 쓸 프로바이더를 미리 준비해 둡니다.
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-
-  default_tags {
-    tags = local.common_tags
-  }
-}

@@ -18,14 +18,3 @@ provider "aws" {
     tags = local.common_tags
   }
 }
-
-# CloudFront 용 ACM 인증서와 WAF Web ACL 은 us-east-1 에만 만들 수 있습니다.
-# 도메인을 붙일 때 쓰게 됩니다.
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-
-  default_tags {
-    tags = local.common_tags
-  }
-}
