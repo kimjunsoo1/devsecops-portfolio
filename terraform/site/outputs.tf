@@ -14,3 +14,18 @@ output "trusted_subject" {
   description = "이 역할이 신뢰하는 정확한 sub 클레임. 워크플로 로그의 값과 일치해야 합니다."
   value       = local.github_subject
 }
+
+output "site_bucket" {
+  description = "정적 사이트 원본 버킷"
+  value       = aws_s3_bucket.site.id
+}
+
+output "distribution_id" {
+  description = "CloudFront 배포 ID. 캐시 무효화에 씁니다."
+  value       = aws_cloudfront_distribution.site.id
+}
+
+output "site_url" {
+  description = "사이트 주소"
+  value       = "https://${aws_cloudfront_distribution.site.domain_name}"
+}

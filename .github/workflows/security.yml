@@ -39,9 +39,9 @@ jobs:
         --config=p/github-actions
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: '3.12'
 
@@ -56,7 +56,7 @@ jobs:
         continue-on-error: true
 
       - name: SARIF 업로드
-        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v3
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
         with:
           sarif_file: ${{ runner.temp }}/semgrep.sarif
           category: semgrep
@@ -75,7 +75,7 @@ jobs:
       security-events: write
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # curl | sh 대신 서명된 apt 저장소를 씁니다.
       # 보안 도구를 검증 없이 받아 실행하는 건 그 자체로 공급망 문제입니다.
@@ -95,7 +95,7 @@ jobs:
           trivy fs --scanners vuln,secret,misconfig --format sarif --output "$RUNNER_TEMP/trivy.sarif" --exit-code 0 .
 
       - name: SARIF 업로드
-        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v3
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
         with:
           sarif_file: ${{ runner.temp }}/trivy.sarif
           category: trivy
