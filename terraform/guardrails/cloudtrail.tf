@@ -166,5 +166,16 @@ resource "aws_cloudtrail" "this" {
   # 로그 파일이 변조되지 않았음을 증명하는 해시 체인. 무료입니다.
   enable_log_file_validation = true
 
+  # 로그 파일을 전용 CMK 로 암호화합니다 (CKV_AWS_35 / Trivy AWS-0015).
+  #
+  # CloudTrail 은 암호화할 때 aws:cloudtrail:arn 을 EncryptionContext 로
+  # 넣습니다. kms.tf 의 AllowCloudTrailToEncryptLogs 문장이 그 컨텍스트로
+  # 키 사용 범위를 이 계정의 트레일로 한정합니다.
+  #
+  # 키 정책이 틀리면 CloudTrail 은 예외를 던지지 않고 조용히 배달을
+  # 멈춥니다. CI 도 PR 도 초록인 채로 감사 기록만 끊깁니다. apply 후
+  # get-trail-status 의 LatestDeliveryError 확인이 필수입니다.
+  kms_key_id = aws_kms_key.audit.arn
+
   depends_on = [aws_s3_bucket_policy.trail]
 }
