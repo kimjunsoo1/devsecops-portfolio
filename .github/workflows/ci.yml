@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: [bootstrap, guardrails]
+        stack: [bootstrap, guardrails, site]
     defaults:
       run:
         working-directory: terraform/${{ matrix.stack }}
