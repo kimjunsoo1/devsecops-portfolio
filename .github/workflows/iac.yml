@@ -54,7 +54,10 @@ jobs:
       - name: SARIF 업로드
         uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
         with:
-          sarif_file: ${{ runner.temp }}/results.sarif
+          # checkov 는 --output-file-path 를 디렉터리로만 해석하고 파일명을
+          # results_<형식>.<확장자> 로 직접 정합니다. 파일명을 주면 그 이름의
+          # 디렉터리를 만듭니다. 추측이 아니라 로컬에서 측정해 확인한 동작입니다.
+          sarif_file: ${{ runner.temp }}/results_sarif.sarif
           category: checkov
         if: always()
 
