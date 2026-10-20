@@ -182,5 +182,20 @@ resource "aws_cloudtrail" "this" {
   # get-trail-status 의 LatestDeliveryError 확인이 필수입니다.
   kms_key_id = aws_kms_key.audit.arn
 
-  depends_on = [aws_s3_bucket_policy.trail]
+  # CloudWatch Logs 로도 같은 이벤트를 보냅니다 (CKV2_AWS_10 / AWS-0162).
+  # S3 는 보관과 조사용, CloudWatch 는 알람 평가용입니다.
+  #
+  # 그룹 ARN 뒤에 :* 를 붙여야 합니다. 안 붙이면 CloudTrail 이
+  # InvalidCloudWatchLogsLogGroupArnException 을 던집니다. 프로바이더
+  # 버전에 따라 .arn 이 이미 :* 를 포함할 수 있어 trimsuffix 로
+  # 중복을 막습니다 - 어느 쪽이든 결과가 같습니다.
+  cloud_watch_logs_group_arn = "${trimsuffix(aws_cloudwatch_log_group.trail.arn, ":*")}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.trail_cwl.arn
+
+  # 역할과 정책이 먼저 있어야 CloudTrail 이 쓰기를 시작할 수 있습니다.
+  # 정책 연결 전에 트레일이 켜지면 첫 배달이 실패합니다.
+  depends_on = [
+    aws_s3_bucket_policy.trail,
+    aws_iam_role_policy.trail_cwl,
+  ]
 }
