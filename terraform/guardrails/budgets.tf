@@ -7,9 +7,14 @@ resource "aws_sns_topic" "billing_alerts" {
 
   # SNS 주제 자체는 무료이고, 이메일 발송도 월 1,000건까지 무료입니다.
 
-  # 저장 시 암호화. alias/aws/sns 는 AWS 관리형 키라 월 키 요금이 없고,
-  # 이 주제는 한 달에 알림 몇 건만 처리하므로 요청 요금도 사실상 0 입니다.
-  # Trivy AWS-0095 (high) 대응.
+  # 저장 시 암호화. 전용 CMK 를 씁니다 (kms.tf 의 aws_kms_key.audit).
+  #
+  # 처음에는 alias/aws/sns (AWS 관리형 키) 를 썼습니다. 키 요금이 없어서
+  # 비용상 유리했지만, AWS 관리형 키는 키 정책을 수정할 수 없습니다.
+  # 그래서 CloudWatch 알람이 이 주제로 발행할 수 없고, 탐지 통제를 붙이는
+  # 순간 막힙니다. 비용이 아니라 기능 때문에 CMK 로 옮겼습니다.
+  #
+  # Trivy AWS-0095(미암호화) 와 AWS-0136(CMK 아님) 을 동시에 해소합니다.
   kms_master_key_id = aws_kms_key.audit.arn
 }
 
