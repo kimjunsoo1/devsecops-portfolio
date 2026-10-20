@@ -41,8 +41,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "trail" {
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.audit.arn
     }
+
+    # 버킷 키를 켜면 객체마다 KMS 를 호출하는 대신 버킷 수준 데이터 키를
+    # 재사용합니다. KMS 요청 요금이 최대 99% 줄어듭니다. CMK 를 쓰면서
+    # 비용이 거의 안 늘어나는 이유가 이것입니다.
     bucket_key_enabled = true
   }
 }
