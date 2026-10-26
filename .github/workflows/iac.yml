@@ -52,7 +52,7 @@ jobs:
           checkov --directory . --framework terraform --output sarif --output-file-path "$RUNNER_TEMP" --soft-fail --quiet
 
       - name: SARIF 업로드
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           # checkov 는 --output-file-path 를 디렉터리로만 해석하고 파일명을
           # results_<형식>.<확장자> 로 직접 정합니다. 파일명을 주면 그 이름의
