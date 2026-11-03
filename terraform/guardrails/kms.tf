@@ -19,9 +19,9 @@ data "aws_iam_policy_document" "audit_key" {
   # 아래 세 건은 Checkov 가 이 문서를 범용 IAM 정책으로 평가해서 생기는 오탐입니다.
   # KMS 키 정책은 정의상 키 하나에만 붙고, KMS 는 키 정책의 Resource 에 다른 ARN 을
   # 허용하지 않습니다. 즉 "*" 가 유일하게 유효한 형태이며 "이 키" 를 의미합니다.
-  #checkov:skip=CKV_AWS_109:키 정책의 Resource="*" 는 "이 키" 를 의미한다. KMS 는 키 정책에 다른 리소스 ARN 을 허용하지 않으므로 제약을 더 좁힐 수단이 없다.
-  #checkov:skip=CKV_AWS_111:같은 이유. 또한 계정 주체의 kms:* 문장을 빼면 키가 잠기고 복구 경로가 없다 - AWS 의 policy lockout safety check 가 그런 정책을 애초에 거부한다.
-  #checkov:skip=CKV_AWS_356:같은 이유. 서비스 주체 문장들은 EncryptionContext 조건으로 이 계정의 트레일과 로그 그룹에 한정되어 있다.
+  #checkov:skip=CKV_AWS_109:키 정책의 Resource="*" 는 "이 키" 를 의미한다. KMS 는 키 정책에 다른 리소스 ARN 을 허용하지 않으므로 제약을 더 좁힐 수단이 없다. permanent
+  #checkov:skip=CKV_AWS_111:같은 이유. 또한 계정 주체의 kms:* 문장을 빼면 키가 잠기고 복구 경로가 없다 - AWS 의 policy lockout safety check 가 그런 정책을 애초에 거부한다. permanent
+  #checkov:skip=CKV_AWS_356:같은 이유. 서비스 주체 문장들은 EncryptionContext 조건으로 이 계정의 트레일과 로그 그룹에 한정되어 있다. permanent
   # 계정 주체에게 전권을 줍니다.
   #
   # 이 문장을 빼면 키를 잠그고 되돌릴 수 없습니다. KMS 는 IAM 정책만으로

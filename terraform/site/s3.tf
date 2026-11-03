@@ -9,6 +9,10 @@
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "site" {
+  #checkov:skip=CKV_AWS_18:S3 서버 액세스 로깅 미적용. 이 버킷은 CloudFront 가 OAC 로만 읽으므로 접근 기록은 CloudFront 계층에서 받는 것이 맞다(CKV_AWS_86 참조). 또한 로그 버킷을 만들면 그 버킷이 다시 이 룰에 걸리는 재귀가 생긴다. 계층 선택의 문제. permanent
+  #checkov:skip=CKV_AWS_144:교차 리전 복제 미적용. 복제는 스토리지와 전송 비용을 두 배로 만든다. 이 버킷의 내용물은 git 에서 언제든 재배포할 수 있는 빌드 산출물이므로 복제로 지킬 고유 데이터가 없다. 비용 기반 거절. permanent
+  #checkov:skip=CKV_AWS_145:CMK 대신 SSE-S3(AES256) 사용. 이 버킷에 담기는 것은 CloudFront 가 전 세계에 공개하는 정적 파일이라 기밀성 요구가 없다. 공개 콘텐츠에 월 1달러 키 비용을 쓸 이유가 없다. 저장 시 암호화 요건은 AES256 으로 충족한다. permanent
+  #checkov:skip=CKV2_AWS_62:이벤트 알림 미설정. 알림을 받아 처리할 소비자가 없다. 배포는 GitHub Actions 가 동기적으로 수행하고 완료 여부는 워크플로 결과로 확인한다. 아키텍처상 해당 없음. permanent
   bucket = "${var.project}-site-${local.account_id}"
 }
 
