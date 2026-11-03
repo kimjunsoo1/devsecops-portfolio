@@ -34,7 +34,7 @@ v7 로 올려둔 상태였습니다. 결과적으로 워크플로마다 checkout
 import re
 import subprocess
 import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 from pathlib import Path
 
 USES = re.compile(
@@ -113,6 +113,15 @@ def inconsistencies():
     return {a: uses for a, uses in by_action.items() if len({u[2] for u in uses}) > 1}
 
 
+def commit_date(repo: str, sha: str):
+    """커밋 날짜를 ISO 문자열로. 비교용이라 문자열 정렬이면 충분합니다."""
+    proc = subprocess.run(
+        ["gh", "api", f"repos/{repo}/commits/{sha}", "--jq", ".commit.committer.date"],
+        capture_output=True, text=True,
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else ""
+
+
 def align(write: bool) -> int:
     bad = inconsistencies()
     if not bad:
@@ -120,12 +129,18 @@ def align(write: bool) -> int:
         return 0
 
     for action, uses in bad.items():
-        # 가장 많이 쓰인 SHA 를 정답으로 봅니다. 새로 추가한 파일 한 곳이
-        # 옛 태그로 고정되는 것이 전형적인 어긋남이기 때문입니다.
-        winner, _ = Counter(u[2] for u in uses).most_common(1)[0]
+        # 기준은 "가장 많이 쓰인 SHA" 가 아니라 "커밋이 가장 최신인 SHA" 입니다.
+        #
+        # 처음에는 다수결로 정했는데, 실제로 돌려보니 두 건을 거꾸로 맞췄습니다.
+        # 1대1 동률에서는 먼저 읽힌 쪽이 이겼고, 한 워크플로에 두 번 쓰인
+        # 옛 버전이 다른 워크플로의 새 버전을 이겼습니다.
+        # 많이 쓰인 것과 맞는 것은 다릅니다.
+        repo = "/".join(action.split("/")[:2])
+        dated = sorted({u[2] for u in uses}, key=lambda sha: commit_date(repo, sha))
+        winner = dated[-1]
         comment = next((u[3] for u in uses if u[2] == winner and u[3]), None)
         print(f"\n  {action}")
-        print(f"    기준 SHA  {winner[:12]}…  {('# ' + comment) if comment else ''}")
+        print(f"    기준 SHA  {winner[:12]}…  {('# ' + comment) if comment else ''}  (커밋 최신)")
         for path, lineno, ref, _c in uses:
             if ref == winner:
                 continue
