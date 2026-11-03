@@ -82,3 +82,20 @@ updates:
     labels:
       - dependencies
       - terraform
+
+  # --- CI 파이썬 도구 ---
+  # requirements-ci.txt 를 추적합니다. checkov 룰 증가가 전용 PR 로 와서,
+  # 그 PR 안에서 새 발견사항을 보고 고칠지 억제할지 판단하게 됩니다.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Seoul
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - dependencies
+      - ci
