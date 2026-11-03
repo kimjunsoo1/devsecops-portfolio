@@ -61,12 +61,18 @@ data "aws_cloudfront_response_headers_policy" "security" {
 }
 
 resource "aws_cloudfront_distribution" "site" {
+  #checkov:skip=CKV2_AWS_47:AWSManagedRulesKnownBadInputsRuleSet 을 override_action none 으로 적용했고, 2026-11-03 테스트에서 Log4JRCE_HEADER 룰이 jndi:ldap 패턴을 담은 User-Agent 요청을 BLOCK 한 WAF 샘플 기록을 확인했다. 통제가 실제로 동작함을 관측으로 확인했으므로 Checkov 판정과 어긋나는 쪽을 억제한다. 근거는 추론이 아니라 차단 기록이다. terraform/site/waf.tf 참조
   enabled             = true
   comment             = "${var.project} static site"
   default_root_object = "index.html"
 
   # 아시아·북미·유럽 엣지만 사용합니다. 전체(PriceClass_All)보다 쌉니다.
   price_class = "PriceClass_200"
+
+  # WAF Web ACL 연결. WAFv2 는 id 가 아니라 ARN 을 받습니다
+  # (속성 이름이 web_acl_id 인 것은 WAF Classic 시절의 유산입니다).
+  # Trivy AWS-0011 / Checkov CKV_AWS_68, CKV2_AWS_47 해소.
+  web_acl_id = aws_wafv2_web_acl.site.arn
 
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
