@@ -3,7 +3,8 @@
 # 차단 기준: docs/security-policy.md
 #   gitleaks - 발견 시 무조건 차단 (ci.yml)
 #   Semgrep  - ERROR 등급만 차단
-#   Trivy    - HIGH/CRITICAL 만 차단, .trivyignore.yaml 로 수용한 항목 제외
+#   Trivy    - 취약점·시크릿은 전체, 오설정은 terraform 제외 (HIGH/CRITICAL)
+#   Checkov  - terraform 오설정 단독 담당 (iac.yml). docs/adr/0007 참조
 #
 # 리포트 파일은 워크스페이스가 아니라 runner.temp 에 씁니다.
 # 리포지토리 안에 두면 뒤따르는 게이트 단계가 그 리포트를 스캔 대상으로 잡고,
@@ -32,10 +33,13 @@ jobs:
       security-events: write
 
     env:
+      # p/terraform 을 뺐습니다. Terraform 오설정은 Checkov 가 단독으로
+      # 책임집니다(docs/adr/0007). 세 도구가 같은 파일을 보면 같은 판단을
+      # 세 군데서 관리해야 하고, 한쪽을 잊으면 PR 이 왜 빨간지 추적하는 데
+      # 시간을 씁니다.
       SEMGREP_CONFIGS: >-
         --config=p/security-audit
         --config=p/secrets
-        --config=p/terraform
         --config=p/github-actions
 
     steps:
@@ -46,7 +50,7 @@ jobs:
           python-version: '3.12'
 
       - name: Semgrep 설치
-        run: pip install semgrep
+        run: pip install -r requirements-ci.txt
 
       # 1단계: 전체 결과를 SARIF 로 뽑아 Security 탭에 올립니다.
       # 등급과 무관하게 전부 보이게 하는 것이 목적이므로 실패시키지 않습니다.
@@ -101,7 +105,19 @@ jobs:
           category: trivy
         if: always()
 
-      # 2단계: 게이트. 억제 목록에 없는 HIGH/CRITICAL 이 하나라도 있으면 실패합니다.
-      - name: 게이트 (HIGH/CRITICAL)
+      # 2단계: 게이트. 두 단계로 나뉘어 있습니다.
+      #
+      # --skip-dirs terraform 을 trivy fs 에 그냥 붙이면 terraform 디렉터리의
+      # 시크릿 검사까지 함께 꺼집니다. 시크릿은 전체를 봐야 하므로 스캐너별로
+      # 명령을 쪼갭니다.
+      #
+      # .trivyignore.yaml 은 삭제했습니다. 담겨 있던 억제가 전부 terraform
+      # 항목이었고, 근거는 각 리소스 옆 #checkov:skip 주석으로 이관했습니다.
+      # 기한은 scripts/check-suppressions.py 가 강제합니다. docs/adr/0007 참조.
+      - name: 게이트 (취약점·시크릿, 전체)
         run: |
-          trivy fs --scanners vuln,secret,misconfig --ignorefile .trivyignore.yaml --severity HIGH,CRITICAL --exit-code 1 --format table .
+          trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 --format table .
+
+      - name: 게이트 (오설정, terraform 제외)
+        run: |
+          trivy config --skip-dirs terraform --severity HIGH,CRITICAL --exit-code 1 --format table .
