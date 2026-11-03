@@ -9,6 +9,9 @@ locals {
 }
 
 resource "aws_s3_bucket" "trail" {
+  #checkov:skip=CKV_AWS_18:S3 서버 액세스 로깅 미적용. 감사 버킷에 접근 기록이 필요하다는 지적은 타당하나, 로그 버킷을 만들면 그 버킷이 다시 이 룰에 걸리는 재귀가 생긴다. 현재는 CloudTrail 데이터 이벤트 대신 1인 계정이라는 전제로 수용하며, 계정에 사람이 늘면 가장 먼저 재검토할 항목이다. revisit=2027-06-01
+  #checkov:skip=CKV_AWS_144:교차 리전 복제 미적용. 복제 비용이 스토리지와 전송에서 두 배가 된다. 로그 무결성은 log file validation 해시 체인으로, 삭제 방지는 버전 관리와 prevent_destroy 로 확보한다. 비용 기반 거절. permanent
+  #checkov:skip=CKV2_AWS_62:이벤트 알림 미설정. 로그 객체 도착마다 알림을 받아 처리할 소비자가 없다. 대신 CloudTrail 을 CloudWatch Logs 로 보내 메트릭 필터와 알람으로 탐지한다(detection.tf). 같은 목적을 더 나은 계층에서 달성한다. permanent
   bucket = "${var.project}-cloudtrail-${local.account_id}"
 
   # 감사 로그 버킷을 실수로 지우지 않도록 잠급니다.
@@ -158,6 +161,7 @@ resource "aws_s3_bucket_policy" "trail" {
 }
 
 resource "aws_cloudtrail" "this" {
+  #checkov:skip=CKV_AWS_252:CloudTrail SNS 토픽 미설정. 로그 전달 알림은 레거시 경로이고, 객체 도착마다 오는 알림은 사람이 곧 무시하게 된다. 같은 목적을 CloudWatch Logs 메트릭 필터와 알람으로 달성한다(detection.tf 의 cloudtrail-config-change 등). 계층 선택의 문제. permanent
   name           = local.trail_name
   s3_bucket_name = aws_s3_bucket.trail.id
 

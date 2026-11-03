@@ -57,3 +57,24 @@ jobs:
 
       - name: validate
         run: terraform validate -no-color
+
+  actions-pinned:
+    name: 액션 고정 검사
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+
+      # 모든 액션이 커밋 SHA 로 고정되어 있는지, 같은 액션이 여러 파일에서
+      # 같은 SHA 를 쓰는지 검사합니다. 네트워크를 쓰지 않습니다.
+      #
+      # 왜 필요한가: Dependabot 은 액션 경로별로 PR 을 따로 만듭니다.
+      # codeql-action 의 init / analyze / upload-sarif 가 서로 다른 릴리스로
+      # 갈라질 수 있고, init 과 analyze 가 어긋나면 CodeQL 이 깨집니다.
+      # 2026-11-03 에 실제로 그 상태가 되었고 사람이 눈으로 잡았습니다.
+      # 기계가 할 일입니다.
+      - name: pin-actions --check
+        run: python3 scripts/pin-actions.py --check
