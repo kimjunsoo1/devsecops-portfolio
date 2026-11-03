@@ -61,7 +61,12 @@ data "aws_cloudfront_response_headers_policy" "security" {
 }
 
 resource "aws_cloudfront_distribution" "site" {
-  #checkov:skip=CKV2_AWS_47:AWSManagedRulesKnownBadInputsRuleSet 을 override_action none 으로 적용했고, 2026-11-03 테스트에서 Log4JRCE_HEADER 룰이 jndi:ldap 패턴을 담은 User-Agent 요청을 BLOCK 한 WAF 샘플 기록을 확인했다. 통제가 실제로 동작함을 관측으로 확인했으므로 Checkov 판정과 어긋나는 쪽을 억제한다. 근거는 추론이 아니라 차단 기록이다. terraform/site/waf.tf 참조
+  #checkov:skip=CKV_AWS_86:CloudFront 액세스 로깅 미적용. 레거시 logging_config 는 로그 버킷에 ACL 을 요구하는데, 계정 차원 BucketOwnerEnforced 원칙과 충돌한다. 로그 버킷을 만들면 그 버킷이 다시 CKV_AWS_18 에 걸리는 재귀도 생긴다. 방문 추이는 CloudFront 메트릭으로 보고, 요청 단위 로그가 필요해지면 standard logging v2 로 간다. revisit=2027-02-01
+  #checkov:skip=CKV_AWS_174:CloudFront 기본 인증서를 쓰므로 minimum_protocol_version 을 설정할 수 없다. TLS 버전은 AWS 가 관리하며 현재 TLSv1.2 이상이다. 사용자 도메인과 ACM 인증서를 붙이는 시점에 명시적으로 지정한다. revisit=2027-02-01
+  #checkov:skip=CKV2_AWS_42:사용자 지정 SSL 인증서 미적용. 도메인을 아직 사지 않아 CloudFront 기본 도메인을 쓰고 있다. ACM 인증서는 도메인이 전제조건이므로 순서 문제이고 수용이 아니다. revisit=2027-02-01
+  #checkov:skip=CKV_AWS_374:지역 제한 미적용. 취업용 포트폴리오 사이트이므로 전 세계에서 접근 가능해야 한다. 지역 차단은 이 사이트의 목적에 정면으로 반한다. 아키텍처상 해당 없음. permanent
+  #checkov:skip=CKV_AWS_310:오리진 failover 미구성. 두 번째 리전에 복제 버킷을 두어야 하는데, 정적 포트폴리오 사이트에 리전 소실 대비는 과하다. 스토리지와 전송 비용이 두 배가 되며 얻는 가용성은 이 서비스 수준에 불필요하다. 비용 기반 거절. permanent
+  #checkov:skip=CKV2_AWS_47:AWSManagedRulesKnownBadInputsRuleSet 을 override_action none 으로 적용했고, 2026-11-03 테스트에서 Log4JRCE_HEADER 룰이 jndi:ldap 패턴을 담은 User-Agent 요청을 BLOCK 한 WAF 샘플 기록을 확인했다. 통제가 실제로 동작함을 관측으로 확인했으므로 Checkov 판정과 어긋나는 쪽을 억제한다. 근거는 추론이 아니라 차단 기록이다. terraform/site/waf.tf 참조. permanent
   enabled             = true
   comment             = "${var.project} static site"
   default_root_object = "index.html"

@@ -41,6 +41,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 억제 주석의 근거와 기한을 검사합니다.
+      #
+      # Checkov 인라인 억제에는 Trivy 의 expired_at 같은 기한 장치가 없어서
+      # 직접 만들었습니다. 2026-11-03 에 Trivy 의 AWS-0011 유예가 만료되어
+      # 게이트를 막았고, 그 덕에 WAF 적용 결정을 더 미루지 못했습니다.
+      # Checkov 로 억제를 이관하면 그 강제력이 사라지므로 이 검사가 필요합니다.
+      #
+      # 이 단계는 처음부터 게이트입니다. 다른 스캐너와 달리 관찰 기간이
+      # 필요하지 않습니다 - 실패시키는 것이 존재 목적이기 때문입니다.
+      - name: 억제 주석 검사
+        run: python3 scripts/check-suppressions.py
+
       - name: Checkov 설치
         run: pip install checkov
 
