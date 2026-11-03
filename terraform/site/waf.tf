@@ -21,6 +21,7 @@
 # ---------------------------------------------------------------------------
 
 resource "aws_wafv2_web_acl" "site" {
+  #checkov:skip=CKV2_AWS_31:WAF 전체 로깅에는 us-east-1 전용 로그 그룹과 해당 리전 KMS 키가 더 필요해 월 1달러가 추가된다. WAF 가 이미 이 프로젝트 최대 비용 항목(월 8달러)이므로, 지금은 sampled_requests_enabled 와 CloudWatch 메트릭으로 가시성을 확보한다. 요청 단위 포렌식이 필요해지면 켠다. revisit=2027-02-01
   provider = aws.us_east_1
 
   name        = "${var.project}-site"

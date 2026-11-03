@@ -61,6 +61,7 @@ data "aws_cloudfront_response_headers_policy" "security" {
 }
 
 resource "aws_cloudfront_distribution" "site" {
+  #checkov:skip=CKV2_AWS_47:AWSManagedRulesKnownBadInputsRuleSet 을 override_action none 으로 적용했고, 2026-11-03 테스트에서 Log4JRCE_HEADER 룰이 jndi:ldap 패턴을 담은 User-Agent 요청을 BLOCK 한 WAF 샘플 기록을 확인했다. 통제가 실제로 동작함을 관측으로 확인했으므로 Checkov 판정과 어긋나는 쪽을 억제한다. 근거는 추론이 아니라 차단 기록이다. terraform/site/waf.tf 참조
   enabled             = true
   comment             = "${var.project} static site"
   default_root_object = "index.html"
