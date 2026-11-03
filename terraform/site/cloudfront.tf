@@ -68,6 +68,11 @@ resource "aws_cloudfront_distribution" "site" {
   # 아시아·북미·유럽 엣지만 사용합니다. 전체(PriceClass_All)보다 쌉니다.
   price_class = "PriceClass_200"
 
+  # WAF Web ACL 연결. WAFv2 는 id 가 아니라 ARN 을 받습니다
+  # (속성 이름이 web_acl_id 인 것은 WAF Classic 시절의 유산입니다).
+  # Trivy AWS-0011 / Checkov CKV_AWS_68, CKV2_AWS_47 해소.
+  web_acl_id = aws_wafv2_web_acl.site.arn
+
   origin {
     domain_name              = aws_s3_bucket.site.bucket_regional_domain_name
     origin_id                = "s3-site"
