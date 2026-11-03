@@ -172,9 +172,11 @@ scripts/
   check-suppressions.py   억제 주석의 근거와 기한 검사
 docs/
   adr/                    설계 결정 기록
+  evidence/               주차별 검증 증적 (자격증명 보고서, 배포 로그, WAF 차단 기록)
   security-policy.md      차단 기준
   security-backlog.md     수용한 위험과 재검토 시점
   security-testing.md     스캐너 검증 런북
+  week-01-checklist.md    1주차 완료 체크리스트
 .github/workflows/
   ci.yml        시크릿 스캔, Terraform 정적 검사, 액션 고정 검사
   security.yml  Semgrep, Trivy
