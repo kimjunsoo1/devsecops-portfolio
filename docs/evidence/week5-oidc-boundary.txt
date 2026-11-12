@@ -1,0 +1,18 @@
+# 5주차 침투 검증 1 — OIDC trust policy 브랜치 경계
+#
+# 수집: 2026-11-12T00:42:23Z
+# 방법: main 이 아닌 test/oidc-boundary 브랜치에서 배포 역할 맡기를 시도
+# 기대: 거부. sub 클레임의 브랜치가 main 과 달라 trust policy 와 불일치
+#
+# 결과: PASS — ref 만 다른 토큰이 거부됨. StringEquals 완전 일치 동작 확인.
+#
+# 참고: configure-aws-credentials 는 거부를 일시 오류로 보고 12회 재시도하여
+#       약 40초가 걸린다. 실제 배포의 자격증명 오류도 같은 지연을 보인다.
+
+## 제시된 신원 vs 요구된 신원
+sub : repo:kimjunsoo1@13637699/devsecops-portfolio@1356699604:ref:refs/heads/test/oidc-boundary
+요구된 sub : repo:kimjunsoo1@13637699/devsecops-portfolio@1356699604:ref:refs/heads/main
+
+## 거부 증거
+Not authorized to perform sts:AssumeRoleWithWebIdentity
+PASS — 역할 맡기가 거부되었습니다. 브랜치 제한이 동작합니다.
