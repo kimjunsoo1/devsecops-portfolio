@@ -1,0 +1,17 @@
+# 5주차 침투 검증 2 — S3 OAC 우회 시도
+#
+# 수집: 2026-11-12T01:32:55Z
+# 방법: CloudFront 를 거치지 않고 S3 버킷에 직접 접근 시도
+# 기대: 직접 접근 거부, CloudFront 경유만 허용(대조군)
+#
+# 대조군이 핵심: 같은 index.html 이 직접 경로로는 403, CloudFront 로는
+# 200 이어야 한다. 그래야 403 이 '버킷이 비어서'가 아니라 '접근 차단'임이 증명된다.
+
+직접 GET (HTTPS)  : 403  (403 기대)
+버킷 리스팅       : 403  (403 기대)
+HTTP 평문         : 403  (403 기대, DenyInsecureTransport)
+CloudFront 경유   : 200  (200 기대, 대조군)
+
+직접 접근 시 S3 응답 (AccessDenied XML):
+  <?xml version="1.0" encoding="UTF-8"?>
+  <Error><Code>AccessDenied</Code><Message>Access Denied</Message><RequestId>MJ0R9WRR1EN187YG</RequestId><HostId>beee+H4dnXXzd2x1cDnSBv+FvpgoPi38euM4TSuq5mdmVbTw3aEKwk0SvSp9fHbA83NKaoOsYv0=</HostId></Error>
