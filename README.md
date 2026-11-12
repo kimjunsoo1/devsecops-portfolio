@@ -102,6 +102,28 @@ CIS AWS Foundations Benchmark 를 참고했지만 그대로 베끼지 않았습�
 429 로 분리했습니다 — 요청이 많아 막힌 클라이언트에게 404 는 "없다" 는 뜻이어서
 재시도를 멈출 이유가 없습니다.
 
+## 파이프라인 침투 검증
+
+지금까지의 통제가 **막아야 할 것을 실제로 막는지**를 공격으로 확인했다. 전부 본인
+계정·본인 리포지토리 대상이고, 각 검증은 거부가 성공 결과다. 증적은
+[`docs/evidence/week5-*.txt`](docs/evidence/).
+
+| 검증 | 공격 가정 | 결과 |
+|---|---|---|
+| OIDC trust policy | 다른 브랜치 토큰으로 역할 탈취 | 거부 — ref 만 달라도 막힘 |
+| S3 OAC + 버킷 정책 | CloudFront 우회 직접 접근 | 거부 — 직접·리스팅·평문 전부 403, CloudFront 만 200 |
+| 배포 역할 권한 경계 | CI 장악 후 측면이동·권한상승 | 거부 — 자기 권한 확대 포함 전부 AccessDenied |
+
+세 검증이 각각 다른 공격 단계를 막는다 — 들어오기(OIDC), 돌아가기(OAC),
+퍼지기(권한 경계). 가장 중요한 것은 배포 역할이 **스스로 관리자 정책을 붙이지
+못하는 것**이다. 이것이 막혀야 CI 가 완전히 장악되어도 피해가 세 리소스(site
+버킷, 그 객체, 배포 1개)에 갇힌다. 근거와 설계 원칙은
+[ADR 0010](docs/adr/0010-pipeline-penetration-testing.md).
+
+검증 중에 Semgrep 게이트가 검증 워크플로 자신의 `curl | python3` 를 막았다.
+방어를 검증하는 코드가 방어에 걸린 것이고, 억제하지 않고 고쳤다 - 자세한 내용은
+[`docs/security-testing.md`](docs/security-testing.md)의 사례 8.
+
 ## 설계 원칙
 
 비용이 제약이었고, 그 제약이 아키텍처를 정했습니다.
@@ -126,6 +148,7 @@ CIS AWS Foundations Benchmark 를 참고했지만 그대로 베끼지 않았습�
 | [0007](docs/adr/0007-scanner-responsibility-split.md) | 스캐너별 책임 범위를 하나로 분리한다 |
 | [0008](docs/adr/0008-cmk-as-detection-prerequisite.md) | CMK 는 탐지 통제의 전제조건이었다 |
 | [0009](docs/adr/0009-dependency-gate-deadlock.md) | 의존성 게이트 교착은 통합 브랜치로 푼다 |
+| [0010](docs/adr/0010-pipeline-penetration-testing.md) | 방어를 공격으로 검증한다 |
 
 ## 비용
 
@@ -149,13 +172,14 @@ CIS AWS Foundations Benchmark 를 참고했지만 그대로 베끼지 않았습�
 - [x] **2주차** — 정적 사이트 배포 (S3 + CloudFront + OAC + OIDC)
 - [x] **3주차** — 코드 보안 게이트 (gitleaks / Semgrep / Trivy / CodeQL → SARIF)
 - [x] **4주차** — IaC 게이트 (Checkov / tflint), 탐지 통제, WAF, 억제 기한 강제
-- [ ] 5주차 — 컨테이너와 공급망 (distroless / SBOM / Cosign)
-- [ ] 6주차 — 런타임 보안 (GuardDuty / Prowler / WAF 로깅)
-- [ ] 7주차 — 관측과 롤백 (대시보드 / ZAP)
+- [x] **5주차** — 파이프라인 침투 검증 (OIDC / OAC / 배포 역할 경계)
+- [ ] 6주차 — 빌드 공급망 (distroless 빌드 이미지 / SBOM / Cosign 서명·검증)
+- [ ] 7주차 — 계정 전역 탐지 (GuardDuty / Prowler)
 - [ ] 8주차 — 위협 모델 · 런북 · 데모
 
-4주차 범위에 없었지만 하게 된 것: WAF(기한 만료로 당겨짐), 탐지 알람 5종(스캐너가
-요구하지 않은 추가), `check-suppressions.py`(역할 분리의 전제조건).
+7주차의 ECS 전환은 범위에서 뺐다. 잘 동작하는 월 $10 아키텍처를 컨테이너 학습을
+위해 바꾸는 것은 거꾸로다. 대신 빌드 도구를 컨테이너화해 런타임 비용 없이 공급망
+통제를 만든다(6주차).
 
 ## 디렉터리
 
