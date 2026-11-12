@@ -1,0 +1,81 @@
+# 5주차 침투 검증 1 — OIDC trust policy 경계 시험
+#
+# 목적: 배포 역할의 trust policy 가 main 브랜치 토큰만 받아들이는지 확인한다.
+# 이 워크플로는 일부러 main 이 아닌 브랜치에서 돈다. 그 브랜치의 OIDC 토큰은
+# sub 가 "...:ref:refs/heads/<이 브랜치>" 이므로 trust policy 의
+# "...:ref:refs/heads/main" 과 일치하지 않는다.
+#
+# 기대 결과: AssumeRoleWithWebIdentity 거부(Not authorized to perform).
+# 거부가 성공이다. 역할을 맡는 데 성공하면 그것이 발견사항이다 -
+# 브랜치 제한이 동작하지 않는다는 뜻이기 때문이다.
+#
+# 안전성:
+# - 읽기나 쓰기를 하지 않는다. 역할을 맡으려는 시도까지만 하고 멈춘다.
+# - 원시 OIDC 토큰(JWT)은 로그에 출력하지 않는다. 그 자체가 단명 자격증명이다.
+#   페이로드의 sub/aud 클레임만 디코딩해 남긴다 - 이것은 비밀이 아니다.
+# - 본인 계정, 본인 리포지토리만 대상으로 한다.
+
+name: oidc-trust-boundary-test
+
+# main 이 아닌, 이 전용 브랜치에서만 돈다.
+on:
+  push:
+    branches:
+      - test/oidc-boundary
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # OIDC 토큰 발급에 필요
+  contents: read
+
+jobs:
+  assume-from-wrong-branch:
+    name: main 아닌 브랜치에서 역할 맡기 시도
+    runs-on: ubuntu-latest
+    steps:
+      - name: 제시될 sub 클레임 확인
+        # 토큰을 요청해 페이로드만 디코딩한다. 서명부(세 번째 조각)는 버린다.
+        # 원시 토큰은 절대 출력하지 않는다.
+        #
+        # curl 출력을 파이프로 python 에 바로 넘기지 않는다. Semgrep 의
+        # gha-curl-pipe-shell 이 지적하는 "원격 데이터를 받아 즉시 실행"
+        # 안티패턴이기 때문이다. 응답을 파일에 받고 python 에 그 경로를
+        # 인자로 넘긴다. 이 워크플로의 목적이 신뢰 경계 검증이므로,
+        # 검증 코드 자체가 안티패턴을 쓰면 앞뒤가 맞지 않는다.
+        run: |
+          curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" \
+            -o "$RUNNER_TEMP/token.json"
+          python3 -c '
+          import base64, json, sys
+          token = json.load(open(sys.argv[1]))["value"]
+          payload = token.split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(payload))
+          print("=== 이 토큰이 제시하는 신원 ===")
+          for k in ("sub", "aud", "ref", "repository"):
+              print(f"{k:12}:", claims.get(k))
+          print()
+          print("trust policy 가 요구하는 sub:")
+          print("  repo:kimjunsoo1@13637699/devsecops-portfolio@1356699604:ref:refs/heads/main")
+          ' "$RUNNER_TEMP/token.json"
+          rm -f "$RUNNER_TEMP/token.json"
+
+      - name: 역할 맡기 시도 (거부되어야 정상)
+        id: assume
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
+        with:
+          role-to-assume: arn:aws:iam::170638969320:role/devsecops-portfolio-github-deploy
+          aws-region: ap-northeast-2
+
+      - name: 결과 판정
+        run: |
+          if [ "${{ steps.assume.outcome }}" = "failure" ]; then
+            echo "PASS — 역할 맡기가 거부되었습니다. 브랜치 제한이 동작합니다."
+            exit 0
+          else
+            echo "FINDING — main 이 아닌 브랜치에서 역할을 맡았습니다."
+            echo "trust policy 의 sub 조건이 제대로 걸리지 않았습니다. 즉시 조사하십시오."
+            exit 1
+          fi
