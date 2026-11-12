@@ -36,20 +36,30 @@ jobs:
       - name: 제시될 sub 클레임 확인
         # 토큰을 요청해 페이로드만 디코딩한다. 서명부(세 번째 조각)는 버린다.
         # 원시 토큰은 절대 출력하지 않는다.
+        #
+        # curl 출력을 파이프로 python 에 바로 넘기지 않는다. Semgrep 의
+        # gha-curl-pipe-shell 이 지적하는 "원격 데이터를 받아 즉시 실행"
+        # 안티패턴이기 때문이다. 응답을 파일에 받고 python 에 그 경로를
+        # 인자로 넘긴다. 이 워크플로의 목적이 신뢰 경계 검증이므로,
+        # 검증 코드 자체가 안티패턴을 쓰면 앞뒤가 맞지 않는다.
         run: |
-          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | python3 -c "import sys,json;print(json.load(sys.stdin)['value'])")
-          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2)
-          # base64url 패딩 보정 후 디코딩
-          PAD=$(( (4 - ${#PAYLOAD} % 4) % 4 ))
-          PAYLOAD="${PAYLOAD}$(printf '=%.0s' $(seq 1 $PAD))"
-          echo "=== 이 토큰이 제시하는 신원 ==="
-          echo "$PAYLOAD" | tr '_-' '/+' | base64 -d 2>/dev/null \
-            | python3 -c "import sys,json; d=json.load(sys.stdin); print('sub :', d.get('sub')); print('aud :', d.get('aud')); print('ref :', d.get('ref')); print('repository :', d.get('repository'))"
-          echo
-          echo "trust policy 가 요구하는 sub:"
-          echo "  repo:kimjunsoo1@13637699/devsecops-portfolio@1356699604:ref:refs/heads/main"
-          unset TOKEN PAYLOAD
+          curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" \
+            -o "$RUNNER_TEMP/token.json"
+          python3 -c '
+          import base64, json, sys
+          token = json.load(open(sys.argv[1]))["value"]
+          payload = token.split(".")[1]
+          payload += "=" * (-len(payload) % 4)
+          claims = json.loads(base64.urlsafe_b64decode(payload))
+          print("=== 이 토큰이 제시하는 신원 ===")
+          for k in ("sub", "aud", "ref", "repository"):
+              print(f"{k:12}:", claims.get(k))
+          print()
+          print("trust policy 가 요구하는 sub:")
+          print("  repo:kimjunsoo1@13637699/devsecops-portfolio@1356699604:ref:refs/heads/main")
+          ' "$RUNNER_TEMP/token.json"
+          rm -f "$RUNNER_TEMP/token.json"
 
       - name: 역할 맡기 시도 (거부되어야 정상)
         id: assume
