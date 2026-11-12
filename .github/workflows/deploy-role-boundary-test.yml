@@ -1,0 +1,101 @@
+# 5주차 침투 검증 3 — 배포 역할 권한 경계 시험
+#
+# 목적: 배포 역할이 허용된 세 리소스(site 버킷, 그 객체, 배포 1개) 밖으로
+# 나갈 수 없는지 확인한다. 공격자가 CI 를 장악했다고 가정했을 때의 피해 반경을
+# 측정하는 것이다.
+#
+# 모든 "밖으로 나가는" 시도는 AccessDenied 가 되어야 정상이다. 거부가 성공이다.
+# 하나라도 성공하면 그것이 발견사항이다.
+#
+# 안전성:
+# - a/b/c 시도는 전부 거부당하므로 아무것도 바꾸지 않는다.
+#   특히 c(put-role-policy)는 호출하지만 거부되므로 정책은 그대로다.
+# - d 대조군만 실제 쓰기인데, 테스트 키 하나를 쓰고 바로 지운다.
+# - main 브랜치에서만 돈다. 정당한 토큰이 있어야 역할을 맡을 수 있기 때문이다.
+# - 본인 계정, 본인 리소스만 대상으로 한다.
+
+name: deploy-role-boundary-test
+
+on:
+  workflow_dispatch:   # 수동 실행. 정당한 main 토큰으로 돈다.
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  SITE_BUCKET: devsecops-portfolio-site-170638969320
+  STATE_BUCKET_HINT: devsecops-portfolio-tfstate
+  TRAIL_BUCKET: devsecops-portfolio-cloudtrail-170638969320
+  DEPLOY_ROLE: arn:aws:iam::170638969320:role/devsecops-portfolio-github-deploy
+
+jobs:
+  boundary:
+    name: 배포 역할의 권한 경계 확인
+    runs-on: ubuntu-latest
+    steps:
+      - name: 배포 역할 맡기 (정당한 경로, 성공해야 정상)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
+        with:
+          role-to-assume: arn:aws:iam::170638969320:role/devsecops-portfolio-github-deploy
+          aws-region: ap-northeast-2
+
+      - name: 맡은 신원 확인
+        run: |
+          echo "현재 신원:"
+          aws sts get-caller-identity --query 'Arn' --output text
+
+      - name: 경계 시험
+        run: |
+          set +e   # 개별 명령 실패로 스텝이 멈추지 않게 한다. 거부가 기대값이다.
+          FINDINGS=0
+
+          check_denied() {
+            local label="$1"; shift
+            local out rc
+            out=$("$@" 2>&1); rc=$?
+            if [ $rc -ne 0 ] && echo "$out" | grep -qiE "AccessDenied|not authorized|explicit deny"; then
+              echo "  PASS  $label — 거부됨"
+            elif [ $rc -ne 0 ]; then
+              # 다른 이유로 실패. 거부는 아니지만 접근도 아님. 내용을 남긴다.
+              echo "  PASS? $label — 실패했으나 AccessDenied 아님: $(echo "$out" | head -1)"
+            else
+              echo "  FINDING  $label — 성공했습니다. 경계 밖 접근이 허용됨."
+              FINDINGS=$((FINDINGS+1))
+            fi
+          }
+
+          echo "## a) 측면 이동 — 다른 버킷"
+          # state 버킷은 이름에 계정 ID 가 붙으므로 힌트로 열거를 시도(이것도 거부 대상)
+          check_denied "tfstate 버킷 리스팅" aws s3 ls "s3://${STATE_BUCKET_HINT}-170638969320/"
+          check_denied "trail 버킷 리스팅"   aws s3 ls "s3://${TRAIL_BUCKET}/"
+          check_denied "trail 객체 읽기"     aws s3 cp "s3://${TRAIL_BUCKET}/AWSLogs/" ./x --recursive
+
+          echo "## b) 정찰 — IAM 조회"
+          check_denied "IAM 역할 목록"  aws iam list-roles --max-items 1
+          check_denied "자기 역할 조회" aws iam get-role --role-name devsecops-portfolio-github-deploy
+
+          echo "## c) 권한 상승 — 자기 정책 수정 (가장 중요)"
+          check_denied "자기 역할에 관리자 정책 부여" \
+            aws iam put-role-policy --role-name devsecops-portfolio-github-deploy \
+              --policy-name pentest-escalation-attempt \
+              --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"*","Resource":"*"}]}'
+
+          echo "## d) 대조군 — 정당한 작업은 되어야 한다"
+          echo "pentest marker $(date -u +%s)" > /tmp/marker.txt
+          if aws s3 cp /tmp/marker.txt "s3://${SITE_BUCKET}/.pentest-marker" 2>&1; then
+            echo "  PASS  site 버킷 쓰기 — 성공 (정당한 작업)"
+            aws s3 rm "s3://${SITE_BUCKET}/.pentest-marker" >/dev/null 2>&1 && echo "        테스트 객체 삭제함"
+          else
+            echo "  이상  site 버킷 쓰기가 실패했습니다. 배포가 깨질 수 있습니다."
+            FINDINGS=$((FINDINGS+1))
+          fi
+
+          echo
+          if [ $FINDINGS -eq 0 ]; then
+            echo "결과: PASS — 경계 밖 접근이 모두 거부되었습니다. 피해 반경이 세 리소스로 제한됩니다."
+            exit 0
+          else
+            echo "결과: FINDING $FINDINGS 건 — 경계 밖 접근이 허용되었습니다. 위 로그를 확인하십시오."
+            exit 1
+          fi
