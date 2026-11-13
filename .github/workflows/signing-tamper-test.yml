@@ -42,6 +42,10 @@ jobs:
 
       - name: 변조 테스트
         run: |
+          # verify() 가 변조본에 의도적으로 비0 을 반환한다. GitHub Actions 의
+          # 기본 bash -e 는 그 비0 에서 스크립트를 죽이므로, 이 구간만 -e 를
+          # 끈다. 판정은 아래 if 에서 수동 exit 으로 제어한다.
+          set +e
           cd "$RUNNER_TEMP"
           verify() {
             cosign verify-blob \
