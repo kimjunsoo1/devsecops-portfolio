@@ -225,6 +225,28 @@ data "aws_iam_policy_document" "billing_topic" {
       values   = [local.account_id]
     }
   }
+
+  # GuardDuty 발견사항이 EventBridge 를 거쳐 이 토픽으로 발행될 수 있게 한다.
+  # SourceArn 으로 우리 GuardDuty 규칙만 허용한다 - 다른 규칙은 발행 불가.
+  # 이 문장이 없으면 GuardDuty 가 탐지해도 메일이 오지 않는다(ADR 0008).
+  statement {
+    sid    = "AllowEventBridgeGuardDuty"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+
+    actions   = ["SNS:Publish"]
+    resources = [aws_sns_topic.billing_alerts.arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceOwner"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
 }
 
 resource "aws_sns_topic_policy" "billing_alerts" {

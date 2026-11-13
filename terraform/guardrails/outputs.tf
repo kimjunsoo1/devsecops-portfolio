@@ -23,3 +23,8 @@ output "next_step" {
   description = "1주차 완료 후 할 일"
   value       = "받은편지함에서 SNS 구독 확인 메일의 'Confirm subscription' 을 누르세요. 그 전까지는 알림이 오지 않습니다."
 }
+
+output "guardduty_detector_id" {
+  description = "GuardDuty 디텍터 ID. 무료 체험 일수 조회 등에 쓴다."
+  value       = aws_guardduty_detector.this.id
+}
