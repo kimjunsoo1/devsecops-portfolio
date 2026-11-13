@@ -102,6 +102,37 @@ CIS AWS Foundations Benchmark 를 참고했지만 그대로 베끼지 않았습�
 429 로 분리했습니다 — 요청이 많아 막힌 클라이언트에게 404 는 "없다" 는 뜻이어서
 재시도를 멈출 이유가 없습니다.
 
+## 빌드 공급망
+
+배포되는 산출물이 우리 CI 가 만든 바로 그것인지 보증한다. 빌드와 S3 업로드
+사이에서 dist 가 바뀌어도 알 수 있어야 한다.
+
+| 계층 | 통제 | 무엇을 보증하나 |
+|---|---|---|
+| 무엇이 들어갔나 | SBOM (CycloneDX, syft) | 전체 의존성 트리 기록 (282 컴포넌트) |
+| 누가 만들었나 | cosign keyless 서명 (OIDC, Rekor) | main 의 이 워크플로가 서명 |
+| 강제 | 검증 게이트 | 서명 신원이 일치해야만 S3 배포 |
+
+배포 워크플로는 `build`(빌드·SBOM·서명) 와 `deploy`(검증·배포) 두 잡으로 나뉜다.
+서명된 산출물이 artifact 로 잡 경계를 건너야, 검증이 "서명된 그 산출물이 변조
+없이 왔는지"를 실제로 확인한다. 관리할 개인키는 없다 - GitHub OIDC 토큰으로
+서명하고(Fulcio 단명 인증서, Rekor 투명성 로그), 검증은 인증서 신원이 다음과
+일치하는지 본다.
+
+```
+https://github.com/kimjunsoo1/devsecops-portfolio/.github/workflows/deploy.yml@refs/heads/main
+```
+
+5주차 OIDC trust policy 와 같은 완전 일치 경계를 서명 계층에 세운 것이다.
+
+### 변조를 막는가
+
+서명했다는 것만으로는 부족하다. dist tarball 의 한 바이트를 바꿔 검증이 거부
+(exit 비0)하는지 확인했다 - 정상은 통과(exit 0), 변조는 거부(exit 1). 이 변조
+테스트를 `signing-tamper-test.yml` 로 남겨, 서명 로직을 바꿀 때 회귀를 잡는다.
+거부가 성공이므로 이 워크플로가 초록이면 "서명이 변조를 막는다"는 뜻이다.
+근거는 [ADR 0011](docs/adr/0011-artifact-signing.md).
+
 ## 파이프라인 침투 검증
 
 지금까지의 통제가 **막아야 할 것을 실제로 막는지**를 공격으로 확인했다. 전부 본인
@@ -149,6 +180,7 @@ CIS AWS Foundations Benchmark 를 참고했지만 그대로 베끼지 않았습�
 | [0008](docs/adr/0008-cmk-as-detection-prerequisite.md) | CMK 는 탐지 통제의 전제조건이었다 |
 | [0009](docs/adr/0009-dependency-gate-deadlock.md) | 의존성 게이트 교착은 통합 브랜치로 푼다 |
 | [0010](docs/adr/0010-pipeline-penetration-testing.md) | 방어를 공격으로 검증한다 |
+| [0011](docs/adr/0011-artifact-signing.md) | 배포 산출물을 서명하고 검증을 게이트로 건다 |
 
 ## 비용
 
@@ -173,7 +205,7 @@ CIS AWS Foundations Benchmark 를 참고했지만 그대로 베끼지 않았습�
 - [x] **3주차** — 코드 보안 게이트 (gitleaks / Semgrep / Trivy / CodeQL → SARIF)
 - [x] **4주차** — IaC 게이트 (Checkov / tflint), 탐지 통제, WAF, 억제 기한 강제
 - [x] **5주차** — 파이프라인 침투 검증 (OIDC / OAC / 배포 역할 경계)
-- [ ] 6주차 — 빌드 공급망 (distroless 빌드 이미지 / SBOM / Cosign 서명·검증)
+- [x] **6주차** — 빌드 공급망 (SBOM / Cosign keyless 서명 / 검증 게이트 / 변조 테스트)
 - [ ] 7주차 — 계정 전역 탐지 (GuardDuty / Prowler)
 - [ ] 8주차 — 위협 모델 · 런북 · 데모
 
