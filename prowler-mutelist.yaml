@@ -1,0 +1,146 @@
+### Prowler Mutelist — devsecops-portfolio
+###
+### 계정 전역 Prowler 스캔(63개 고유 FAIL)을 전수 분류한 결과다.
+### 억제엔 반드시 분류 + 근거 + 기한을 단다(Checkov check-suppressions.py 와 동일 철학).
+### 검증: scripts/check-prowler-mutelist.py
+### 적용: prowler aws -f ap-northeast-2 --mutelist prowler-mutelist.yaml
+###
+### 분류:
+###   [N/A]     단일 계정 조직/미사용 서비스 등 구조적으로 성립 불가 → permanent
+###   [ACCEPT]  개인 포트폴리오 범위에서 비용/운영상 의도적으로 안 함 → permanent
+###   [REVISIT] 할 수 있으나 지금은 보류, 기한 명시 → revisit=YYYY-MM-DD
+###
+### 억제하지 않은 3건(수정 백로그)은 docs/prowler-triage.md 참조:
+###   iam_aws_attached_policy_no_administrative_privileges (CRITICAL)
+###   iam_role_administratoraccess_policy (HIGH)
+###   accessanalyzer_enabled (LOW, 무료 — 바로 조치 대상)
+Mutelist:
+  Accounts:
+    "*":
+      Checks:
+
+        ## ---- HIGH ----
+        # [N/A] Bedrock AgentCore 미사용; SSO Admin 롤에 대한 역할분리 오탐 | permanent
+        "bedrockagentcore_payments_process_payment_role_separation": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 단일 계정 조직, Config 위임 관리자/조직 애그리게이터 전제 불가 | permanent
+        "config_delegated_admin_and_org_aggregator_all_regions": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] GuardDuty 유료 보호플랜; 비용 통제로 '기본만' 선택한 설계결정 | permanent
+        "guardduty_ai_protection_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 단일 계정 조직, GuardDuty 위임 관리자 전제 불가 | permanent
+        "guardduty_delegated_admin_enabled_all_regions": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] GuardDuty 유료 런타임 모니터링; '기본만' 설계결정 | permanent
+        "guardduty_runtime_monitoring_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] 루트 자격증명 관리(중앙화) 활성화 검토 | revisit=2027-05-31
+        "iam_root_credentials_management_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] 조직 있으므로 SCP 리전 제한 적용 가능, 추후 | revisit=2027-05-31
+        "organizations_scp_check_deny_regions": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 단일 계정 조직 + Security Hub 미사용, 위임 관리자 전제 불가 | permanent
+        "securityhub_delegated_admin_enabled_all_regions": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] Security Hub 월정액 과금, 개인 포트폴리오 범위 밖 | permanent
+        "securityhub_enabled": { Regions: ["*"], Resources: ["*"] }
+
+        ## ---- MEDIUM ----
+        # [REVISIT] 보안/청구/운영 대체 연락처 분리 설정, 추후 | revisit=2027-05-31
+        "account_maintain_different_contact_details_to_security_billing_and_operations": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] Amazon Bedrock 미사용 | permanent
+        "bedrock_guardrails_configured": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] Amazon Bedrock 미사용 | permanent
+        "bedrock_model_invocation_logging_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 커스텀 도메인 없음, CloudFront 기본 인증서 사용 | permanent
+        "cloudfront_distributions_custom_ssl_certificate": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] CloudFront 액세스 로깅 활성화 검토 | revisit=2027-05-31
+        "cloudfront_distributions_logging_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] MFA delete 는 루트+CLI 필요로 운영부담; 버전닝+버킷정책으로 보완 | permanent
+        "cloudtrail_bucket_requires_mfa_delete": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] CloudTrail S3 버킷 액세스 로깅 추후 | revisit=2027-05-31
+        "cloudtrail_logs_s3_bucket_access_logging_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 정적사이트 계정, 네트워크 변경 표면 최소 — 핵심 필터셋에 집중 | permanent
+        "cloudwatch_changes_to_network_acls_alarm_configured": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 정적사이트 계정, 네트워크 변경 표면 최소 | permanent
+        "cloudwatch_changes_to_network_gateways_alarm_configured": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 정적사이트 계정, 라우팅 변경 표면 최소 | permanent
+        "cloudwatch_changes_to_network_route_tables_alarm_configured": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 정적사이트 계정, VPC 변경 표면 최소 | permanent
+        "cloudwatch_changes_to_vpcs_alarm_configured": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 로그 보관 90일(비용 절충); CIS 365일은 포트폴리오 범위에서 과함 | permanent
+        "cloudwatch_log_group_retention_policy_specific_days_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] AWS Config 미사용이라 현재 무의미; Config 도입 시 필터 추가 | revisit=2027-05-31
+        "cloudwatch_log_metric_filter_and_alarm_for_aws_config_configuration_changes_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] 인증 실패 메트릭 필터 추가 검토 | revisit=2027-05-31
+        "cloudwatch_log_metric_filter_authentication_failures": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] 조직 변경 메트릭 필터 추가 검토 | revisit=2027-05-31
+        "cloudwatch_log_metric_filter_aws_organizations_changes": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] audit-key-change 필터로 커버하나 Prowler 패턴 불일치, 정합성 확인 | revisit=2027-05-31
+        "cloudwatch_log_metric_filter_disable_or_scheduled_deletion_of_kms_cmk": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] S3 버킷 정책 변경 메트릭 필터 추가 검토 | revisit=2027-05-31
+        "cloudwatch_log_metric_filter_for_s3_bucket_policy_changes": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] 보안그룹 변경 메트릭 필터 추가 검토 | revisit=2027-05-31
+        "cloudwatch_log_metric_filter_security_group_changes": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] MFA 없는 콘솔 로그인 메트릭 필터 추가 검토 | revisit=2027-05-31
+        "cloudwatch_log_metric_filter_sign_in_without_mfa": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] AWS Config 레코더 상시 과금, 개인 포트폴리오 범위 밖 | permanent
+        "config_recorder_all_regions_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] DRS(재해복구) 엔터프라이즈 범위, 포트폴리오 대상 아님 | permanent
+        "drs_job_exist": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 단일 계정 조직, GuardDuty 중앙관리 전제 불가 | permanent
+        "guardduty_centrally_managed": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] EKS 미사용 + 유료 런타임 모니터링 | permanent
+        "guardduty_eks_runtime_monitoring_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] Amazon Bedrock 미사용(SSO 롤 대상 오탐) | permanent
+        "iam_role_access_not_stale_to_bedrock": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] Inspector2 유료 취약점 스캐너, 비용상 범위 밖 | permanent
+        "inspector2_is_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] Macie 유료 S3 민감정보 스캐너, 비용상 범위 밖 | permanent
+        "macie_is_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 단일 계정 거버넌스, 조직 AI opt-out 정책 저가치 | permanent
+        "organizations_opt_out_ai_services_policy": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] 사이트 버킷 SSE-S3 → KMS 업그레이드 검토(CloudTrail 버킷은 이미 KMS) | revisit=2027-05-31
+        "s3_bucket_kms_encryption": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] S3 MFA delete 운영부담, 버전닝+정책으로 보완 | permanent
+        "s3_bucket_no_mfa_delete": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] S3 서버 액세스 로깅 활성화 추후 | revisit=2027-05-31
+        "s3_bucket_server_access_logging_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] SSM Incident Manager 엔터프라이즈 범위 | permanent
+        "ssmincidents_enabled_with_plans": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 단일 리전 설계, 다중 리전 VPC 전제 불가 | permanent
+        "vpc_different_regions": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] WAFv2 로깅 활성화 검토(비용 절충) | revisit=2027-05-31
+        "wafv2_webacl_logging_enabled": { Regions: ["*"], Resources: ["*"] }
+
+        ## ---- LOW ----
+        # [ACCEPT] 백업 대상 최소, AWS Backup 범위 밖 | permanent
+        "backup_vaults_exist": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] Amazon Bedrock 미사용 | permanent
+        "bedrock_prompt_management_exists": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 정적 포트폴리오 사이트, 민감 필드 없음 | permanent
+        "cloudfront_distributions_field_level_encryption_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 공개 포트폴리오, 지역 제한 불필요 | permanent
+        "cloudfront_distributions_geo_restrictions_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] 커스텀 도메인 없음, 기본 인증서 정책에 고정됨 | permanent
+        "cloudfront_distributions_pqc_tls_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] CloudTrail Insights 추가 과금, 포트폴리오 범위 밖 | permanent
+        "cloudtrail_insights_exist": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] S3 데이터 이벤트 대량 로깅/과금, 범위 밖 | permanent
+        "cloudtrail_s3_dataevents_read_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] S3 데이터 이벤트 대량 로깅/과금, 범위 밖 | permanent
+        "cloudtrail_s3_dataevents_write_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] CIS SecurityAudit 역할 생성 검토 | revisit=2027-05-31
+        "iam_securityaudit_role_created": { Regions: ["*"], Resources: ["*"] }
+        # [REVISIT] CIS Support 역할 생성 검토 | revisit=2027-05-31
+        "iam_support_role_created": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 단일 계정, 조직 태그 정책 저가치 | permanent
+        "organizations_tags_policies_enabled_and_attached": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 다중 리전 교차 복제(DR), 포트폴리오 범위 밖 | permanent
+        "s3_bucket_cross_region_replication": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] S3 이벤트 알림 불필요 | permanent
+        "s3_bucket_event_notifications_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [ACCEPT] Object Lock(WORM) 포트폴리오엔 과함 | permanent
+        "s3_bucket_object_lock": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] Amazon SageMaker 미사용 | permanent
+        "sagemaker_clarify_exists": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] Amazon SageMaker 미사용 | permanent
+        "sagemaker_models_monitor_enabled": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] Amazon SageMaker 미사용 | permanent
+        "sagemaker_models_registry_in_use": { Regions: ["*"], Resources: ["*"] }
+        # [N/A] 프리미엄 서포트 플랜 유료 구독, 포트폴리오 범위 밖 | permanent
+        "trustedadvisor_premium_support_plan_subscribed": { Regions: ["*"], Resources: ["*"] }
