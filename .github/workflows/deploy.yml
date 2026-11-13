@@ -77,12 +77,12 @@ jobs:
       # 서명과 인증서를 파일로 뽑고, 서명 기록은 Rekor 에 올라간다.
       - name: 산출물 서명 (keyless)
         run: |
+          # cosign v4 는 서명과 인증서를 하나의 번들 파일로 묶는다.
+          # (--new-bundle-format 은 v4 기본값이라 명시하지 않아도 적용된다.)
           cosign sign-blob --yes \
-            --output-signature "$RUNNER_TEMP/site-dist.tar.gz.sig" \
-            --output-certificate "$RUNNER_TEMP/site-dist.tar.gz.pem" \
+            --bundle "$RUNNER_TEMP/site-dist.tar.gz.bundle" \
             "$RUNNER_TEMP/site-dist.tar.gz"
-          echo "서명 생성됨. 서명 당시 신원(인증서 SAN):"
-          openssl x509 -in "$RUNNER_TEMP/site-dist.tar.gz.pem" -noout -ext subjectAltName 2>/dev/null || true
+          echo "서명 번들 생성됨."
 
       # tarball + 서명 + 인증서를 한 artifact 로 묶어 deploy 에 넘긴다.
       - name: 서명된 산출물 업로드
@@ -91,8 +91,7 @@ jobs:
           name: signed-site-${{ github.sha }}
           path: |
             ${{ runner.temp }}/site-dist.tar.gz
-            ${{ runner.temp }}/site-dist.tar.gz.sig
-            ${{ runner.temp }}/site-dist.tar.gz.pem
+            ${{ runner.temp }}/site-dist.tar.gz.bundle
           retention-days: 30
           if-no-files-found: error
 
@@ -126,8 +125,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/signed"
           cosign verify-blob \
-            --certificate "site-dist.tar.gz.pem" \
-            --signature "site-dist.tar.gz.sig" \
+            --bundle "site-dist.tar.gz.bundle" \
             --certificate-oidc-issuer "$EXPECTED_ISSUER" \
             --certificate-identity-regexp "$EXPECTED_IDENTITY_RE" \
             "site-dist.tar.gz"
