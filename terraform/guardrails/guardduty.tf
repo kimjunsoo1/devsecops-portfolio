@@ -74,8 +74,3 @@ resource "aws_cloudwatch_event_target" "guardduty_to_sns" {
 EOT
   }
 }
-
-output "guardduty_detector_id" {
-  description = "GuardDuty 디텍터 ID. 무료 체험 일수 조회 등에 쓴다."
-  value       = aws_guardduty_detector.this.id
-}
