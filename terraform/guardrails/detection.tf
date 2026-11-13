@@ -35,7 +35,12 @@ locals {
 
   # 트레일을 끄거나 지우거나 범위를 줄이는 이벤트.
   trail_change_events = [
+    # 파괴적 이벤트: 로깅 중단·트레일 삭제·설정 변경
     "StopLogging", "DeleteTrail", "UpdateTrail", "PutEventSelectors",
+    # CreateTrail/StartLogging 도 본다. 공격자가 새 트레일을 만들어 로그를
+    # 딴 데로 돌리거나, 꺼둔 로깅을 조작하는 신호다. Prowler(CIS 3.5)가
+    # 우리 필터에서 이 둘의 부재를 짚었고, 실제 탐지 공백이라 메운다.
+    "CreateTrail", "StartLogging",
   ]
 
   # 키를 쓸 수 없게 만드는 이벤트. 이 키가 죽으면 감사 로그를
