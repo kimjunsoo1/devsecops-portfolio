@@ -1,0 +1,19 @@
+# 6주차 공급망 검증 — 산출물 서명 변조 테스트
+#
+# 수집: 2026-11-13T02:01:18Z
+# 방법: 서명된 dist tarball 을 CI artifact 에서 받아, 번들 서명으로 검증.
+#       그다음 tarball 의 100번째 바이트를 0 으로 바꿔 다시 검증.
+# 기대: 정상은 통과(exit 0), 변조는 거부(exit 비0).
+#
+# 서명 신원(인증서 SAN, 번들에서 추출):
+#   URI:https://github.com/kimjunsoo1/devsecops-portfolio/.github/workflows/deploy.yml@refs/heads/main
+#   issuer: token.actions.githubusercontent.com (keyless, Fulcio/Rekor)
+#
+# 주의: cosign 출력을 "| tail" 로 받으면 $? 가 tail 의 exit(0)을 잡아
+#       거부가 통과로 보인다. 거부 메시지가 보여도 exit 0 이면 자동화는
+#       통과로 읽는다. exit 코드는 파이프 없이 직접 받아야 한다.
+
+정상 산출물 검증  exit=0   (0 = Verified OK)
+변조 산출물 검증  exit=1   (비0 = invalid signature, 거부됨)
+
+판정: PASS — 서명이 변조를 막는다
