@@ -1,7 +1,15 @@
-# 정적 사이트 배포.
+# 정적 사이트 배포 — 빌드·서명(build) 과 검증·배포(deploy) 를 분리한다.
 #
-# main 에 site/ 변경이 들어오면 빌드해서 S3 에 올리고 CloudFront 캐시를 비웁니다.
-# AWS 자격증명은 저장하지 않습니다 - OIDC 로 매 실행마다 새로 받습니다.
+# 왜 두 잡인가: 서명과 검증이 같은 잡 안에 있으면 중간에 바뀔 틈이 없어
+# 검증이 통과할 수밖에 없다. artifact 가 잡 경계를 건너야 "build 가 서명한
+# 그 산출물이 변조 없이 왔는지"를 검증이 실제로 확인한다.
+#
+# 서명: cosign keyless (OIDC). 관리할 개인키가 없다. Fulcio 가 발급한
+# 단명 인증서에 워크플로 신원이 박히고, Rekor 투명성 로그에 기록된다.
+# 검증: 그 신원이 "main 브랜치의 이 워크플로"와 일치해야만 통과한다.
+# OIDC trust policy(5주차)와 같은 경계를 서명 계층에 세운다.
+#
+# AWS 자격증명은 저장하지 않는다 - OIDC 로 매 실행마다 새로 받는다.
 
 name: deploy
 
@@ -14,22 +22,18 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
+  id-token: write   # build: cosign 서명 / deploy: AWS OIDC
   contents: read
 
-# 배포가 겹치면 순서가 꼬입니다. 앞 배포가 끝날 때까지 기다립니다.
 concurrency:
   group: deploy-main
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: 빌드 후 배포
+  # ─────────────────────────────────────────────────────────────────
+  build:
+    name: 빌드 및 서명
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: site
-
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -39,26 +43,17 @@ jobs:
           cache: npm
           cache-dependency-path: site/package-lock.json
 
-      # npm install 이 아니라 npm ci 입니다.
-      # package-lock.json 을 그대로 따르므로 로컬과 CI 의 의존성이 갈리지 않습니다.
+      # npm install 이 아니라 npm ci. package-lock.json 을 그대로 따른다.
       - name: 의존성 설치
+        working-directory: site
         run: npm ci
 
       - name: 빌드
+        working-directory: site
         run: npm run build
 
-      # ── 6주차 모듈 1: SBOM 생성 (리포트 전용) ──
-      # package-lock.json 기준으로 전체 의존성 트리의 CycloneDX SBOM 을
-      # 만든다. dist/ 가 아니라 소스를 보는 이유: dist/ 는 번들된 결과라
-      # 원본 패키지 정보가 사라진다. "이 사이트가 어떤 의존성으로
-      # 만들어졌나"가 공급망 질문이다.
-      #
-      # 처음에는 syft 를 curl 로 직접 받아 체크섬 검증 후 설치했으나 CI 에서
-      # 재현 불가한 다운로드 실패가 났다(로컬은 정상). 직접 구현한 설치
-      # 스크립트는 유지보수 부담이자 공격면이므로, 공식 액션을 SHA 로
-      # 고정해 신뢰 범위를 좁히는 쪽으로 바꿨다. docs/adr 참조.
-      #
-      # 아직 배포를 막지 않는다. 모듈 2 에서 서명·검증 게이트를 올린다.
+      # ── 6주차 모듈 1: SBOM (리포트 전용) ──
+      # package-lock.json 기준 전체 의존성 트리의 CycloneDX SBOM.
       - name: SBOM 생성 (CycloneDX)
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
@@ -67,6 +62,83 @@ jobs:
           artifact-name: sbom-${{ github.sha }}.cdx.json
           output-file: ${{ runner.temp }}/sbom.cdx.json
 
+      # ── 6주차 모듈 2: 산출물 압축 후 서명 ──
+      # dist 를 하나의 tarball 로 묶어 서명한다. 서명 대상이 바이트 단위로
+      # 고정되어야 검증이 의미를 갖는다. 이 tarball 그대로 artifact 로
+      # 넘어가고, deploy 는 검증 후 이 tarball 만 푼다.
+      - name: dist 압축
+        run: tar czf "$RUNNER_TEMP/site-dist.tar.gz" -C site dist
+
+      - name: cosign 설치
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      # keyless 서명. --yes 로 대화형 확인을 건너뛴다. GitHub Actions 의
+      # ambient OIDC 토큰을 cosign 이 자동 감지한다(id-token: write 필요).
+      # 서명과 인증서를 파일로 뽑고, 서명 기록은 Rekor 에 올라간다.
+      - name: 산출물 서명 (keyless)
+        run: |
+          cosign sign-blob --yes \
+            --output-signature "$RUNNER_TEMP/site-dist.tar.gz.sig" \
+            --output-certificate "$RUNNER_TEMP/site-dist.tar.gz.pem" \
+            "$RUNNER_TEMP/site-dist.tar.gz"
+          echo "서명 생성됨. 서명 당시 신원(인증서 SAN):"
+          openssl x509 -in "$RUNNER_TEMP/site-dist.tar.gz.pem" -noout -ext subjectAltName 2>/dev/null || true
+
+      # tarball + 서명 + 인증서를 한 artifact 로 묶어 deploy 에 넘긴다.
+      - name: 서명된 산출물 업로드
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-site-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/site-dist.tar.gz
+            ${{ runner.temp }}/site-dist.tar.gz.sig
+            ${{ runner.temp }}/site-dist.tar.gz.pem
+          retention-days: 30
+          if-no-files-found: error
+
+  # ─────────────────────────────────────────────────────────────────
+  deploy:
+    name: 검증 및 배포
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 서명된 산출물 다운로드
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: signed-site-${{ github.sha }}
+          path: ${{ runner.temp }}/signed
+
+      - name: cosign 설치
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      # ── 검증 게이트 ──
+      # 서명이 "main 브랜치의 이 워크플로"가 만든 것인지 확인한다. 신원이
+      # 다르면(다른 브랜치, 다른 워크플로, 외부자) 여기서 실패하고 배포가
+      # 멈춘다. OIDC trust policy 와 같은 완전 일치 경계다.
+      #
+      # 주의: 아래 --certificate-identity 는 첫 실행에서 실제 인증서 SAN 을
+      # 확인해 확정해야 한다. 우선 regexp 로 느슨하게 걸어 서명이 통과하는지
+      # 보고, 실제 신원을 확인한 뒤 완전 일치로 좁힌다. 추측으로 박지 않는다.
+      - name: 산출물 서명 검증 (게이트)
+        env:
+          EXPECTED_ISSUER: https://token.actions.githubusercontent.com
+          EXPECTED_IDENTITY_RE: "^https://github.com/kimjunsoo1/devsecops-portfolio/\\.github/workflows/deploy\\.yml@refs/heads/main$"
+        run: |
+          cd "$RUNNER_TEMP/signed"
+          cosign verify-blob \
+            --certificate "site-dist.tar.gz.pem" \
+            --signature "site-dist.tar.gz.sig" \
+            --certificate-oidc-issuer "$EXPECTED_ISSUER" \
+            --certificate-identity-regexp "$EXPECTED_IDENTITY_RE" \
+            "site-dist.tar.gz"
+          echo "검증 통과 — 서명 신원이 기대값과 일치. 배포를 진행한다."
+
+      - name: 산출물 전개
+        run: |
+          mkdir -p "$RUNNER_TEMP/site"
+          tar xzf "$RUNNER_TEMP/signed/site-dist.tar.gz" -C "$RUNNER_TEMP/site"
+          ls -la "$RUNNER_TEMP/site/dist" | head
+
       - name: AWS 자격증명 획득 (OIDC)
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6
         with:
@@ -74,17 +146,16 @@ jobs:
           aws-region: ap-northeast-2
           role-session-name: deploy-${{ github.run_id }}
 
-      # 해시가 붙은 자산(/_astro/*)은 내용이 바뀌면 파일명이 바뀝니다.
-      # 그래서 1년 캐시에 immutable 을 걸어도 안전합니다.
+      # 해시가 붙은 자산(/_astro/*)은 내용이 바뀌면 파일명이 바뀐다.
+      # 그래서 1년 캐시에 immutable 을 걸어도 안전하다.
       - name: 자산 업로드 (긴 캐시)
         run: |
-          aws s3 sync dist/ "s3://${{ secrets.AWS_SITE_BUCKET }}/" --delete --cache-control "public,max-age=31536000,immutable" --exclude "*.html" --exclude "*.xml" --exclude "*.txt"
+          aws s3 sync "$RUNNER_TEMP/site/dist/" "s3://${{ secrets.AWS_SITE_BUCKET }}/" --delete --cache-control "public,max-age=31536000,immutable" --exclude "*.html" --exclude "*.xml" --exclude "*.txt"
 
-      # HTML 은 주소가 그대로이므로 캐시하면 안 됩니다.
-      # --delete 는 필터 범위 안에서만 동작하므로 위에서 올린 자산은 지워지지 않습니다.
+      # HTML 은 주소가 그대로이므로 캐시하면 안 된다.
       - name: HTML 업로드 (캐시 없음)
         run: |
-          aws s3 sync dist/ "s3://${{ secrets.AWS_SITE_BUCKET }}/" --delete --cache-control "public,max-age=0,must-revalidate" --exclude "*" --include "*.html" --include "*.xml" --include "*.txt"
+          aws s3 sync "$RUNNER_TEMP/site/dist/" "s3://${{ secrets.AWS_SITE_BUCKET }}/" --delete --cache-control "public,max-age=0,must-revalidate" --exclude "*" --include "*.html" --include "*.xml" --include "*.txt"
 
       - name: CloudFront 캐시 무효화
         run: |
