@@ -16,6 +16,16 @@ locals {
 }
 
 data "aws_iam_policy_document" "audit_key" {
+  statement {
+    sid    = "AllowEventBridgeToUseKey"
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+    actions   = ["kms:GenerateDataKey*", "kms:Decrypt"]
+    resources = ["*"]
+  }
   # 아래 세 건은 Checkov 가 이 문서를 범용 IAM 정책으로 평가해서 생기는 오탐입니다.
   # KMS 키 정책은 정의상 키 하나에만 붙고, KMS 는 키 정책의 Resource 에 다른 ARN 을
   # 허용하지 않습니다. 즉 "*" 가 유일하게 유효한 형태이며 "이 키" 를 의미합니다.

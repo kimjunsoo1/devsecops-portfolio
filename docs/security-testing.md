@@ -312,3 +312,68 @@ cosign 이 비0 을 냈다는 뜻이다. 하지만 워크플로는 판정까지 
 - [ ] 스캔 경로에 우리가 만든 산출물(plan, SARIF, 캐시)이 없는가
 - [ ] 실패 건수로 판정하는가 (통과 건수가 아니라)
 - [ ] 억제에 근거와 기한이 있는가 (`scripts/check-suppressions.py`)
+## Case 13 — "모든 게 초록인데 알림 메일은 0통" (GuardDuty → EventBridge → SNS)
+
+**증상.** Week 7에서 GuardDuty 기본 탐지를 붙이고 EventBridge 규칙(심각도 ≥ 4.0)으로
+SNS 메일 알림을 연결했다. Checkov 통과(186/0/25), `terraform plan`/`apply` 정상,
+GuardDuty 디텍터 `ENABLED`, Prowler `guardduty_is_enabled` PASS — **코드·배포·스캐너가 전부 초록**.
+그런데 샘플 발견사항을 쏴도 **메일이 한 통도 오지 않았다.**
+
+**원칙.** "통과가 통제를 뜻하지 않는다." 초록은 코드가 정책을 만족한다는 뜻이지,
+알림이 실제로 배달된다는 증거가 아니다. 경로의 각 홉을 지표로 측정했다.
+
+**측정과 가설 기각.**
+
+1. *필터 임계값이 너무 빡빡한가?* — 샘플 `SSHBruteForce`의 실제 심각도를 측정하니 **2.0 (Low)**.
+   EventBridge 규칙 `severity ≥ 4.0`이 **의도대로 Low를 버린 것**. 이건 버그가 아니라
+   **negative test 통과**(저심각도는 메일로 안 쏜다)로 기록. High(8.0) 샘플로 전환해 positive test 진행.
+
+2. *경로가 끊겼나?* — CloudWatch 지표로 홉별 측정:
+   - `AWS/Events Invocations` = 402, **`FailedInvocations` = 402 (100% 실패)**
+   - `AWS/SNS NumberOfMessagesPublished` = 0
+   → **발행이 SNS에 도달하기 전에 전량 실패.** (402 = 당시 계정에 쌓인 심각도 ≥ 4.0 샘플 수와 일치 → 필터는 정상.)
+
+3. *SNS 토픽 정책 조건 문제인가?* — 새로 넣은 `AllowEventBridgeGuardDuty` 문장만
+   검증 안 된 `ArnEquals aws:SourceArn`를 썼다(작동하던 알람/예산 문장은 `StringEquals aws:SourceOwner`).
+   → 검증된 `SourceOwner` 패턴으로 통일해 재측정. **여전히 100% 실패, Published=0.**
+   두 조건 패턴 모두 실패 → **토픽 정책이 원인이 아니다.**
+
+**진짜 원인 (측정으로 도달).** `FailedInvocations=100% + Published=0`은 "발행이
+토픽 정책 평가 **이전** 단계에서 막힌다"는 신호. SNS 토픽은 audit **KMS CMK로 암호화**돼 있었고,
+그 키 정책이 키 사용 권한을 준 주체는 `cloudtrail`, `logs`, `cloudwatch`(알람), `budgets`뿐 —
+**`events.amazonaws.com`(EventBridge)는 없었다.** EventBridge가 메시지를 암호화할
+`kms:GenerateDataKey`를 못 해서 **발행 자체가 암호화 단계에서 실패**. 알람/예산이 멀쩡했던 건
+각자 키 정책 문장을 갖고 있었기 때문 — 교차검증 성립.
+
+**수정.** audit CMK 키 정책에 `AllowBudgetsToUseKey`와 동일한 모양으로 문장 추가:
+
+```hcl
+statement {
+  sid    = "AllowEventBridgeToUseKey"
+  effect = "Allow"
+  principals { type = "Service"  identifiers = ["events.amazonaws.com"] }
+  actions   = ["kms:GenerateDataKey*", "kms:Decrypt"]
+  resources = ["*"]
+}
+```
+
+**검증 (apply 후 실측).**
+- `NumberOfMessagesPublished` **0 → 1**, 메일 도착(제목 `[GuardDuty] 심각도 8 | ...`).
+- 신선한 3분 창에서 `FailedInvocations` = `[]` (안정).
+- 잔류 재시도 1건은 KMS 키 정책 전파 지연(수 초~십수 초) 중 떨어진 것으로, 안정 후 0.
+
+**교훈.**
+- **암호화된 SNS 토픽은 "발행 주체"가 토픽 정책뿐 아니라 CMK 키 정책에도 등재돼야 한다.**
+  토픽 정책만 보면 놓친다.
+- 지표 패턴이 층을 특정한다: `FailedInvocations↑ + Published=0` → 발행 이전(권한/암호화),
+  `Published↑ + 메일 없음` → 구독/전달. 짐작 대신 홉별 측정으로 범위를 좁혔다.
+- 초록 3종(Checkov·plan·Prowler)이 모두 통과한 상태에서 실제 결함이 존재했다 —
+  스캐너는 "코드가 규칙을 만족하는가"를 보지, "알림이 배달되는가"를 보지 않는다.
+
+## Case 14 — bash 히스토리 확장이 명령을 조용히 삼킴
+
+`create-sample-findings --finding-types "CryptoCurrency:EC2/BitcoinTool.B!DNS"`를
+**큰따옴표**로 실행하자 `-bash: !DNS: event not found`. 큰따옴표 안의 `!`를 bash가
+히스토리 확장으로 가로채 **명령이 아예 실행되지 않았다**(그런데 이전에 만들어둔 동명 발견사항이
+조회돼 "생성된 것처럼" 보임 → 오판 유발). `set +H` 또는 **작은따옴표**로 해결.
+교훈: 외부 토큰에 `!`가 있으면 작은따옴표로 감싸고, 생성류 명령은 `echo exit=$?`로 실제 실행을 확인한다.
