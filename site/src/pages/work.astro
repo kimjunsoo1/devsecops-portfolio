@@ -1,0 +1,49 @@
+---
+import Base from '../layouts/Base.astro';
+import MethodBlock from '../components/MethodBlock.astro';
+import ProjectTable from '../components/ProjectTable.astro';
+import { work } from '../lib/data';
+---
+<Base title="Work" description="웹 · 모바일 · 클라우드 진단, 모의해킹, 기업 위협 식별, 보안 아키텍처 포트폴리오">
+  <section class="page-head">
+    <div class="wrap">
+      <p class="eyebrow"><b>~/</b>work — portfolio</p>
+      <h1>애플리케이션 점검 · 기업 위협 분석 · DevSecOps</h1>
+      <p>10년 동안 해 온 일을 다섯 영역으로 정리했습니다. 영역마다 어떻게 진단하는지, 어디에서 해 봤는지를 함께 적었습니다.</p>
+      <nav class="toc" aria-label="목차">
+        {work.sections.map((s) => <a href={`#${s.id}`}><span>{s.no}</span>{s.title}</a>)}
+        <a href="#projects"><span>A</span>전체 프로젝트 목록</a>
+      </nav>
+    </div>
+  </section>
+
+  {work.sections.map((s) => (
+    <section class="section work-section" id={s.id}>
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">{s.no} / {s.label}</p>
+            <h2>{s.title}</h2>
+            <p class="section-lead">{s.lead}</p>
+          </div>
+        </div>
+        <div class="method-list">
+          {s.blocks.map((b) => <MethodBlock {...b} />)}
+        </div>
+      </div>
+    </section>
+  ))}
+
+  <section class="section" id="projects">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Appendix</p>
+          <h2>전체 프로젝트 목록</h2>
+          <p class="section-lead">2016년 입사 이후 PM 또는 수행원으로 참여한 주요 사업 {work.projects.length}건.</p>
+        </div>
+      </div>
+      <ProjectTable />
+    </div>
+  </section>
+</Base>

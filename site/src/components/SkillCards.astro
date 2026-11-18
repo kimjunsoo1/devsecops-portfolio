@@ -1,0 +1,13 @@
+---
+import { profile } from '../lib/data';
+---
+<div class="skills">
+  {profile.skills.map((s) => (
+    <article class="card">
+      <span class="no">{s.no}</span>
+      <h3>{s.title}</h3>
+      <ul class="ticks">{s.items.map((i) => <li>{i}</li>)}</ul>
+      <p class="proof">Proven at <b>{s.proof}</b></p>
+    </article>
+  ))}
+</div>

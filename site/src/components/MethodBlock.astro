@@ -1,0 +1,26 @@
+---
+interface Step { name: string; items: string[] }
+interface Props { title: string; desc?: string; flow?: string[]; steps: Step[]; note?: string }
+const { title, desc, flow, steps, note } = Astro.props;
+---
+<article class="method">
+  <header class="method-head">
+    <h3>{title}</h3>
+    {desc && <p>{desc}</p>}
+  </header>
+  {flow && (
+    <ol class="chain">
+      {flow.map((f, i) => <li><span>{String(i + 1).padStart(2, '0')}</span>{f}</li>)}
+    </ol>
+  )}
+  <div class:list={['steps', `cols-${Math.min(steps.length, 4)}`]}>
+    {steps.map((s, i) => (
+      <div class="step">
+        <div class="step-no">{String(i + 1).padStart(2, '0')}</div>
+        <h4>{s.name}</h4>
+        <ul>{s.items.map((it) => <li>{it}</li>)}</ul>
+      </div>
+    ))}
+  </div>
+  {note && <p class="method-note">{note}</p>}
+</article>

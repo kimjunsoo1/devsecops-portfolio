@@ -1,0 +1,20 @@
+---
+import type { CollectionEntry } from 'astro:content';
+interface Props { posts: CollectionEntry<'blog'>[] }
+const { posts } = Astro.props;
+const fmt = (d: Date) => d.toISOString().slice(0, 10).replaceAll('-', '.');
+---
+<div class="posts">
+  {posts.map((post) => (
+    <a class="post-row" href={`/blog/${post.id}/`}>
+      <time datetime={post.data.pubDate.toISOString()}>{fmt(post.data.pubDate)}</time>
+      <div>
+        <h3>{post.data.title}</h3>
+        <p>{post.data.description}</p>
+      </div>
+      <div class="tags">
+        {post.data.tags.slice(0, 2).map((t) => <span class="chip">{t}</span>)}
+      </div>
+    </a>
+  ))}
+</div>

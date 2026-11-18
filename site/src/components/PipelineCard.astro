@@ -1,0 +1,21 @@
+---
+import { devsecops } from '../lib/data';
+const icon: Record<string, string> = { pass: '✓', run: '●', wait: '○' };
+const run = devsecops.run;
+const passed = run.filter((p) => p.status === 'pass').length;
+---
+<div class="run-card" role="img" aria-label={`배포 파이프라인 ${run.length}단계 중 ${passed}단계 통과`}>
+  <div class="bar"><i></i><i></i><i></i></div>
+  <div class="head">
+    <span><b>deploy.yml</b> · main</span>
+    <span>{passed}/{run.length} passed</span>
+  </div>
+  {run.map((p) => (
+    <div class="run-row">
+      <span class={`st st-${p.status}`}>{icon[p.status]}</span>
+      <span class="stage">{p.stage}</span>
+      <span class="tool">{p.tool}</span>
+    </div>
+  ))}
+  <div class="foot">$ git push → <span>게이트 · 서명 검증 통과 시에만</span> 배포</div>
+</div>
