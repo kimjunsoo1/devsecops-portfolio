@@ -1,49 +1,120 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
-import { SITE_DESCRIPTION, SITE_TITLE } from '../consts';
----
+import Base from '../layouts/Base.astro';
+import PipelineCard from '../components/PipelineCard.astro';
+import ArchFlow from '../components/ArchFlow.astro';
+import Roadmap from '../components/Roadmap.astro';
+import PostList from '../components/PostList.astro';
+import SkillCards from '../components/SkillCards.astro';
+import { site, profile, work, devsecops } from '../lib/data';
+import { getPosts } from '../lib/posts';
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>🧑‍🚀 Hello, Astronaut!</h1>
-			<p>
-				Welcome to the official <a href="https://astro.build/">Astro</a> blog starter template. This template
-				serves as a lightweight, minimally-styled starting point for anyone looking to build a personal
-				website, blog, or portfolio with Astro.
-			</p>
-			<p>
-				This template comes with a few integrations already configured in your
-				<code>astro.config.mjs</code> file. You can customize your setup with
-				<a href="https://astro.build/integrations">Astro Integrations</a> to add tools like Tailwind,
-				React, or Vue to your project.
-			</p>
-			<p>Here are a few ideas on how to get started with the template:</p>
-			<ul>
-				<li>Edit this page in <code>src/pages/index.astro</code></li>
-				<li>Edit the site header items in <code>src/components/Header.astro</code></li>
-				<li>Add your name to the footer in <code>src/components/Footer.astro</code></li>
-				<li>Check out the included blog posts in <code>src/content/blog/</code></li>
-				<li>Customize the blog post page layout in <code>src/layouts/BlogPost.astro</code></li>
-			</ul>
-			<p>
-				Have fun! If you get stuck, remember to
-				<a href="https://docs.astro.build/">read the docs</a>
-				or <a href="https://astro.build/chat">join us on Discord</a> to ask questions.
-			</p>
-			<p>
-				Looking for a blog template with a bit more personality? Check out
-				<a href="https://github.com/Charca/astro-blog-template">astro-blog-template</a>
-				by <a href="https://twitter.com/Charca">Maxi Ferreira</a>.
-			</p>
-		</main>
-		<Footer />
-	</body>
-</html>
+const posts = (await getPosts()).slice(0, 3);
+const highlights = [
+  { id: 'appsec', title: '스캐너가 놓치는 것을 찾는다', body: '소스코드 수동 진단과 인증 · 결제 시나리오 분석으로 비즈니스 로직 결함까지.', meta: '이커머스 · 플랫폼 기업' },
+  { id: 'threat', title: '실제 공격 경로를 따라간다', body: '자산 구성도와 인터뷰로 위협을 도출하고, 사용자 PC → 서버 → AD → 핵심 시스템까지 검증.', meta: '플랫폼 기업 · 법무법인 · 통신사' },
+  { id: 'dev', title: '출시 전에 막는 구조를 만든다', body: 'Zero Trust · CI/CD 보안 게이트 · Cloud Native · AI 보안 가이드와 아키텍처 설계.', meta: '통신사 차세대 시스템 · 보안 컨설팅' },
+];
+---
+<Base>
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <p class="eyebrow"><b>$</b> whoami — {site.role}</p>
+        <h1>공격자의 눈으로 보고,<br /><em>파이프라인</em>으로 막습니다.</h1>
+        <p class="lead">
+          10년 동안 웹 · 모바일 · 클라우드 · AD를 직접 뚫어보며 위험을 증명해 왔습니다.
+          지금은 그 경험을 코드와 배포 단계 안으로 옮기는 DevSecOps를 만들고 있습니다.
+        </p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/work/">포트폴리오 보기 →</a>
+          <a class="btn btn-ghost" href="/projects/devsecops-portfolio/">DevSecOps 프로젝트</a>
+        </div>
+      </div>
+      <PipelineCard />
+    </div>
+  </section>
+
+  <section class="facts">
+    <div class="wrap">
+      {profile.facts.map((f) => <div class="fact"><strong>{f.value}</strong><span>{f.label}</span></div>)}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div><p class="eyebrow">01 / Skills</p><h2>현장에서 쌓은 다섯 가지 역량</h2></div>
+        <a href="/about/">About →</a>
+      </div>
+      <SkillCards />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div><p class="eyebrow">02 / Selected work</p><h2>찾는 일에서, 막는 구조까지</h2></div>
+        <a href="/work/">전체 포트폴리오 →</a>
+      </div>
+      <div class="cards">
+        {highlights.map((h, i) => (
+          <a class="card" href={`/work/#${h.id}`}>
+            <span class="no">PROJECT 0{i + 1}</span>
+            <h3>{h.title}</h3>
+            <p>{h.body}</p>
+            <span class="chip chip-start">{h.meta}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div><p class="eyebrow">03 / Featured project</p><h2>지금 보고 계신 이 사이트가 프로젝트입니다</h2></div>
+        <a href={site.repo} rel="noopener noreferrer">GitHub ↗</a>
+      </div>
+      <div class="feature">
+        <div class="feature-body">
+          <span class="chip chip-start">devsecops-portfolio</span>
+          <h3>키 없는 배포, 게이트가 있는 파이프라인</h3>
+          <p>{devsecops.summary}</p>
+          <div class="mini-stats">
+            {devsecops.stats.map((s) => <div><strong>{s.value}</strong><span>{s.label}</span></div>)}
+          </div>
+          <Roadmap compact />
+          <div class="actions">
+            <a class="btn btn-primary" href="/projects/devsecops-portfolio/">아키텍처와 검증 기록 →</a>
+          </div>
+        </div>
+        <div class="feature-art"><ArchFlow /></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div><p class="eyebrow">04 / Writing</p><h2>구축 기록</h2></div>
+        <a href="/blog/">전체 글 →</a>
+      </div>
+      <PostList posts={posts} />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="contact">
+        <div>
+          <p class="eyebrow">05 / Contact</p>
+          <h2>위협 식별부터 파이프라인까지,<br />이야기 나눠요.</h2>
+        </div>
+        <div class="actions">
+          <a class="btn btn-primary" href={`mailto:${site.email}`}>{site.email}</a>
+          <a class="btn btn-ghost" href={site.github} rel="noopener noreferrer">GitHub ↗</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>

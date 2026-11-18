@@ -1,20 +1,32 @@
 ---
-import { type CollectionEntry, getCollection, render } from 'astro:content';
-import BlogPost from '../../layouts/BlogPost.astro';
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { getPosts } from '../../lib/posts';
 
 export async function getStaticPaths() {
-	const posts = await getCollection('blog');
-	return posts.map((post) => ({
-		params: { slug: post.id },
-		props: post,
-	}));
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
 }
-type Props = CollectionEntry<'blog'>;
 
-const post = Astro.props;
-const { Content } = await render(post);
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+const fmt = (d: Date) => d.toISOString().slice(0, 10).replaceAll('-', '.');
+const minutes = Math.max(1, Math.round((post.body?.length ?? 0) / 600));
 ---
-
-<BlogPost {...post.data}>
-	<Content />
-</BlogPost>
+<Base title={post.data.title} description={post.data.description}>
+  <article class="article">
+    <header class="article-head">
+      <a class="eyebrow" href="/blog/">← blog</a>
+      <h1>{post.data.title}</h1>
+      <div class="meta">
+        <time datetime={post.data.pubDate.toISOString()} class="mono">{fmt(post.data.pubDate)}</time>
+        <span>·</span>
+        <span>{minutes}분</span>
+        {post.data.tags.map((t) => <span class="chip">{t}</span>)}
+      </div>
+    </header>
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+</Base>

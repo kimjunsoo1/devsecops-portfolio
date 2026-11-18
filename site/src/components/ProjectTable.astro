@@ -1,0 +1,13 @@
+---
+import { work } from '../lib/data';
+---
+<div class="tbl">
+  <table>
+    <thead><tr><th>사업명</th><th>기간</th><th>담당</th><th>발주처</th></tr></thead>
+    <tbody>
+      {work.projects.map((p) => (
+        <tr><td>{p.name}</td><td class="mono nowrap">{p.period}</td><td>{p.role}</td><td class="nowrap">{p.client}</td></tr>
+      ))}
+    </tbody>
+  </table>
+</div>
