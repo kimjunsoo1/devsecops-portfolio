@@ -1,0 +1,16 @@
+# Trivy 억제 — 기한(expired_at)과 근거는 필수. 기한이 지나면 Trivy 가
+# 억제를 무시해 취약점이 다시 게이트를 막는다(= 재검토 강제).
+#
+# 과거 .trivyignore.yaml 은 담겨 있던 억제를 전부 terraform 수정으로 이관하며
+# 삭제했다(security.yml 참조). 이 항목은 "수정 불가(업스트림 패치 없음)"라
+# 억제가 유일한 선택인 경우다.
+vulnerabilities:
+  - id: CVE-2026-112366
+    # picomatch extglob 반복 패턴 DoS(ReDoS). site 빌드의 전이(빌드타임)
+    # 의존성이며 2.3.2/4.0.7 두 버전 모두 affected, 업스트림 수정 버전 없음.
+    # glob 패턴은 개발자 소유라 외부 공격자 도달 불가 → 실질 위험 낮음.
+    # 패치 공개 시 기한 만료로 범프/재검토를 강제한다.
+    statement: >-
+      picomatch 빌드타임 전이 의존성. extglob DoS 는 정적 사이트 빌드에서
+      개발자 작성 glob 에만 적용돼 외부 도달 불가. 업스트림 수정 버전 없음.
+    expired_at: 2027-02-28

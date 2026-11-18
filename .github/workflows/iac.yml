@@ -53,6 +53,10 @@ jobs:
       - name: 억제 주석 검사
         run: python3 scripts/check-suppressions.py
 
+      # Prowler mutelist 억제도 근거+기한을 강제합니다(억제 주석 검사와 동일 철학).
+      - name: Prowler mutelist 억제 검사
+        run: python3 scripts/check-prowler-mutelist.py
+
       - name: Checkov 설치
         run: pip install -r requirements-ci.txt
 
