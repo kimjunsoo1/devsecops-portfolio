@@ -420,3 +420,7 @@ a.card p { flex: 1; }
   .nav { gap: 0; }
   .nav a { padding: 6px 7px; font-size: 12.5px; }
 }
+
+/* 하이라이트 없이 단색 코드 블록 (CSP style-src 'self' 유지) */
+.prose pre { background: var(--code-bg); color: var(--code-ink); }
+.prose pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }

@@ -54,10 +54,66 @@ data "aws_cloudfront_cache_policy" "optimized" {
   name = "Managed-CachingOptimized"
 }
 
-# HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy 등을
-# 응답에 자동으로 붙입니다. 7주차 ZAP 스캔에서 바로 점수로 돌아옵니다.
-data "aws_cloudfront_response_headers_policy" "security" {
-  name = "Managed-SecurityHeadersPolicy"
+# 관리형 SecurityHeadersPolicy 에는 CSP 가 없어 직접 정의합니다.
+# 사이트는 클라이언트 JS 0KB, 인라인 style 0개(코드 하이라이트 비활성화)라
+# 'unsafe-inline' 없이 'self' 만으로 동작합니다. 외부 리소스(분석 스크립트,
+# 웹폰트 CDN 등)를 붙이려면 이 정책부터 바꿔야 하고, 그게 의도입니다.
+resource "aws_cloudfront_response_headers_policy" "security" {
+  name    = "${var.project}-security-headers"
+  comment = "HSTS, strict CSP, Permissions-Policy"
+
+  security_headers_config {
+    strict_transport_security {
+      access_control_max_age_sec = 31536000
+      include_subdomains         = true
+      preload                    = true
+      override                   = true
+    }
+
+    content_type_options {
+      override = true
+    }
+
+    # 다른 사이트가 이 페이지를 iframe 으로 감쌀 이유가 없습니다(클릭재킹 차단).
+    frame_options {
+      frame_option = "DENY"
+      override     = true
+    }
+
+    referrer_policy {
+      referrer_policy = "strict-origin-when-cross-origin"
+      override        = true
+    }
+
+    content_security_policy {
+      content_security_policy = join("; ", [
+        "default-src 'none'",
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self'",
+        "font-src 'self'",
+        "manifest-src 'self'",
+        "base-uri 'none'",
+        "form-action 'none'",
+        "frame-ancestors 'none'",
+        "upgrade-insecure-requests",
+      ])
+      override = true
+    }
+  }
+
+  custom_headers_config {
+    items {
+      header   = "Permissions-Policy"
+      value    = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+      override = true
+    }
+    items {
+      header   = "Cross-Origin-Opener-Policy"
+      value    = "same-origin"
+      override = true
+    }
+  }
 }
 
 resource "aws_cloudfront_distribution" "site" {
@@ -96,7 +152,7 @@ resource "aws_cloudfront_distribution" "site" {
     compress               = true
 
     cache_policy_id            = data.aws_cloudfront_cache_policy.optimized.id
-    response_headers_policy_id = data.aws_cloudfront_response_headers_policy.security.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.security.id
 
     function_association {
       event_type   = "viewer-request"
