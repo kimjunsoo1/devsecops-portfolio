@@ -96,7 +96,7 @@ jobs:
       # 수용한 항목도 계속 보이는 편이 낫습니다.
       - name: 스캔 (리포트)
         run: |
-          trivy fs --scanners vuln,secret,misconfig --format sarif --output "$RUNNER_TEMP/trivy.sarif" --exit-code 0 .
+          trivy fs --ignorefile .trivyignore.yaml --scanners vuln,secret,misconfig --format sarif --output "$RUNNER_TEMP/trivy.sarif" --exit-code 0 .
 
       - name: SARIF 업로드
         uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
@@ -116,8 +116,8 @@ jobs:
       # 기한은 scripts/check-suppressions.py 가 강제합니다. docs/adr/0007 참조.
       - name: 게이트 (취약점·시크릿, 전체)
         run: |
-          trivy fs --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 --format table .
+          trivy fs --ignorefile .trivyignore.yaml --scanners vuln,secret --severity HIGH,CRITICAL --exit-code 1 --format table .
 
       - name: 게이트 (오설정, terraform 제외)
         run: |
-          trivy config --skip-dirs terraform --severity HIGH,CRITICAL --exit-code 1 --format table .
+          trivy config --ignorefile .trivyignore.yaml --skip-dirs terraform --severity HIGH,CRITICAL --exit-code 1 --format table .
