@@ -11,7 +11,7 @@
 ```
 GitHub (main)
   │
-  ├─ PR 게이트 8종 ─── 하나라도 걸리면 머지 불가
+  ├─ PR 게이트 10종 ─── 하나라도 걸리면 머지 불가
   │
   └─ 머지 ──> GitHub Actions (OIDC, 장기 키 없음)
                   │
@@ -21,12 +21,14 @@ AWS 계정                                                     └─> 방문자
   ├─ CloudTrail (멀티리전, CMK 암호화, 로그 파일 검증)
   │     ├─> S3 (90일 보관, 버전 관리)
   │     └─> CloudWatch Logs ──> 메트릭 필터 5 ──> 알람 5 ──> SNS ──> 메일
+  ├─ GuardDuty (계정 전역 위협 탐지) ──> EventBridge(sev≥4) ──> SNS ──> 메일
+  ├─ Access Analyzer (외부 접근 분석 · 의도선언 아카이브 룰)
   └─ 예산 알림 (월 50/80%, 예측 100%, 일 $3)
 ```
 
 예방 통제(왼쪽)와 탐지 통제(아래)가 모두 있고, **둘 다 실제로 작동하는 것을 확인**
 했습니다. [`docs/security-testing.md`](docs/security-testing.md) 에 검증 절차와
-걸려 넘어진 사례 7건이 있습니다.
+걸려 넘어진 사례 14건이 있습니다.
 
 ## PR 게이트
 
@@ -41,6 +43,7 @@ AWS 계정                                                     └─> 방문자
 | tflint | 경고 1건 (all preset + aws 룰셋) | 4주차 |
 | 억제 주석 검사 | 근거 30자 미만 또는 기한 표기 누락·만료 | 4주차 |
 | 액션 고정 검사 | SHA 미고정 또는 액션별 SHA 불일치 | 4주차 |
+| Prowler mutelist 억제 검사 | 분류·근거·기한 누락 또는 revisit 만료 | 7주차 |
 
 게이트가 많은 것이 목적이 아닙니다. **도구마다 책임 영역을 하나씩 정해서** 같은 판단을
 두 군데서 관리하지 않게 했습니다 — Terraform 오설정은 Checkov 단독, 그 외 오설정은
@@ -65,6 +68,11 @@ terraform/site/s3.tf:14          CKV_AWS_145      permanent
 CloudFront WAF 유예의 기한이 만료되어 게이트가 막혔고, 그래서 WAF 적용 결정을 더
 미루지 못했습니다. 사람의 기억이 아니라 기계가 약속을 지킨 사례입니다.
 
+같은 규율을 계정 전역 스캔에도 적용했습니다 — Prowler 발견사항 억제는
+`prowler-mutelist.yaml` 에 분류(N/A·ACCEPT·REVISIT)·근거·기한을 달고,
+`scripts/check-prowler-mutelist.py` 가 CI 에서 강제합니다. 의존성 취약점은 수정
+버전이 없을 때만 `.trivyignore.yaml` 에 `expired_at` 으로 기한 억제합니다.
+
 ## 탐지 통제
 
 CloudTrail 이벤트에 메트릭 필터와 알람을 걸었습니다.
@@ -84,6 +92,29 @@ CIS AWS Foundations Benchmark 를 참고했지만 그대로 베끼지 않았습�
 
 알림 경로와 탐지 경로를 **따로** 시험했습니다. 한 번에 시험하면 실패했을 때 어느
 쪽인지 알 수 없습니다. 근거는 [ADR 0008](docs/adr/0008-cmk-as-detection-prerequisite.md).
+
+### 계정 전역 탐지 — GuardDuty / Prowler / Access Analyzer (7주차)
+
+메트릭 필터가 "내가 정의한 신호"를 본다면, GuardDuty 는 AWS 관리형 위협 인텔로
+**내가 예측하지 못한 것**을 본다. 기본 디텍터만 켜고(유료 보호 플랜 제외 — 비용 통제),
+심각도 4.0 이상 발견만 EventBridge → SNS → 메일로 보낸다(Low 노이즈 억제).
+
+알림 경로는 실제 샘플 발견을 발사해 검증했는데, **처음엔 메일이 0통**이었다. 지표로
+측정하니 EventBridge 호출은 100% 실패, SNS 발행은 0 — 가설 3개를 기각하고
+**SNS 토픽 CMK 키 정책에 `events.amazonaws.com` 누락**이라는 진짜 원인에 도달해
+고쳤다([`docs/security-testing.md`](docs/security-testing.md) Case 13). 초록이 통제를
+뜻하지 않는다는 산 증거다.
+
+Prowler 로 계정 전역을 스캔(63건 FAIL)하고 **전수 분류**했다 — 단일 계정 조직이라
+구조적으로 성립 불가(N/A), 비용·범위상 수용(ACCEPT), 재검토 기한(REVISIT)으로 나눠
+`prowler-mutelist.yaml` 에 근거+기한으로 억제했다. 가장 위험한 SSO
+`AdministratorAccess` 는 **숨기지 않고 수정 백로그로 남겼다.** 분류 전체는
+[`docs/prowler-triage.md`](docs/prowler-triage.md).
+
+Access Analyzer 를 켜자마자 나온 외부 접근 3건(SSO 롤 2, GitHub OIDC 배포 롤 1)은
+모두 의도된 federated 접근이라, Terraform **아카이브 룰**로 "검토됨·의도됨"을 코드로
+선언했다. 신뢰정책만 보는 분석기라 권한 과다(AdministratorAccess)는 덮이지 않고
+백로그에 그대로 남는다.
 
 ## WAF 검증
 
@@ -155,6 +186,20 @@ https://github.com/kimjunsoo1/devsecops-portfolio/.github/workflows/deploy.yml@r
 방어를 검증하는 코드가 방어에 걸린 것이고, 억제하지 않고 고쳤다 - 자세한 내용은
 [`docs/security-testing.md`](docs/security-testing.md)의 사례 8.
 
+## 위협 모델 · 런북 · 데모 (8주차)
+
+구축한 통제를 **위협 관점에서 재검토**하고, 울렸을 때의 대응과 시연까지 묶었다.
+세 문서가 서로 참조하며 "무엇이 위험한가 → 울리면 뭘 하나 → 실제로 보여주기"로 닫힌다.
+
+| 문서 | 내용 |
+|---|---|
+| [`docs/threat-model.md`](docs/threat-model.md) | STRIDE 전수 분석 + 데이터플로우 다이어그램 + 잔여위험 레지스터(R1–R6) |
+| [`docs/runbook.md`](docs/runbook.md) | 알림원 7종별 대응 플레이북 + 특수 시나리오(OIDC 침해·비밀 유출·tfstate) |
+| [`docs/demo.md`](docs/demo.md) | 공격→탐지→알림→대응 엔드투엔드 데모 3종 + 5분 면접 경로 |
+
+위협모델에서 유일하게 남은 실제 수정 대상은 **R1 — SSO 최소권한**이고, 이는 계정 전역
+Prowler 트리아지의 결론과 정확히 수렴한다(나머지는 전부 수정·근거억제·의도선언 처리).
+
 ## 설계 원칙
 
 비용이 제약이었고, 그 제약이 아키텍처를 정했습니다.
@@ -166,6 +211,7 @@ https://github.com/kimjunsoo1/devsecops-portfolio/.github/workflows/deploy.yml@r
 | 액션을 커밋 SHA 로 고정 | 태그는 옮길 수 있음. 고정과 Dependabot 자동 갱신은 반대가 아니라 한 쌍 |
 | NAT 게이트웨이 미사용 | 트래픽 0 에도 월 $35+. 정적 사이트에 VPC 가 필요 없음 |
 | EKS 미사용 | 컨트롤 플레인만 월 $73. 개인 프로젝트 예산을 혼자 다 씀 |
+| GuardDuty 기본만 | 유료 보호 플랜(런타임·S3·Malware)은 제외. 기본 디텍터로 비용 통제하며 계정 전역 탐지 확보 |
 | 감사·알림 전용 CMK 1개 | 키당 월 $1. CloudTrail·버킷·로그 그룹·SNS 가 한 신뢰 경계라 쪼갤 실익 없음 |
 
 자세한 근거는 [`docs/adr/`](docs/adr/) 에 있습니다.
@@ -184,17 +230,19 @@ https://github.com/kimjunsoo1/devsecops-portfolio/.github/workflows/deploy.yml@r
 
 ## 비용
 
-1주차에 월 3~7만원으로 설계했습니다. 4주차 시점 실측은 **월 약 $10(1.5만원)** 입니다.
+1주차에 월 3~7만원으로 설계했습니다. 실측은 **월 약 $10(1.5만원)** 입니다.
 
 | 항목 | 월 |
 |---|---|
 | WAF (Web ACL $5 + 룰 3개 $3) | $8.00 |
 | KMS 고객 관리 키 1개 | $1.00 |
-| S3 · CloudFront · CloudWatch Logs · CloudTrail | $1 미만 |
+| GuardDuty (기본, 30일 무료 체험 후) | $1~3 |
+| S3 · CloudFront · CloudWatch Logs · CloudTrail · Access Analyzer | $1 미만 |
 
 **보안 통제 하나가 인프라 전체보다 비쌉니다.** WAF 가 전체의 80% 입니다. NAT 와 EKS 를
 쓰지 않기로 한 1주차 결정이 그 예산을 만들어 주었습니다 — 둘 중 하나만 켰어도 WAF 를
-붙일 여유가 없었습니다.
+붙일 여유가 없었습니다. 7주차 GuardDuty 는 기본 디텍터만 켜고 유료 보호 플랜을 빼서
+증가분을 월 $1~3 로 묶었습니다(30일 무료 체험 포함).
 
 예산 알림이 월 상한의 50% / 80% / 예측 100%, 그리고 일 $3 초과 시 메일을 보냅니다.
 
@@ -206,39 +254,52 @@ https://github.com/kimjunsoo1/devsecops-portfolio/.github/workflows/deploy.yml@r
 - [x] **4주차** — IaC 게이트 (Checkov / tflint), 탐지 통제, WAF, 억제 기한 강제
 - [x] **5주차** — 파이프라인 침투 검증 (OIDC / OAC / 배포 역할 경계)
 - [x] **6주차** — 빌드 공급망 (SBOM / Cosign keyless 서명 / 검증 게이트 / 변조 테스트)
-- [ ] 7주차 — 계정 전역 탐지 (GuardDuty / Prowler)
-- [ ] 8주차 — 위협 모델 · 런북 · 데모
+- [x] **7주차** — 계정 전역 탐지 (GuardDuty / Prowler 트리아지 / Access Analyzer)
+- [x] **8주차** — 위협 모델 · 런북 · 데모
 
 7주차의 ECS 전환은 범위에서 뺐다. 잘 동작하는 월 $10 아키텍처를 컨테이너 학습을
 위해 바꾸는 것은 거꾸로다. 대신 빌드 도구를 컨테이너화해 런타임 비용 없이 공급망
 통제를 만든다(6주차).
+
+남은 수정 대상은 하나 — **SSO `AdministratorAccess` 권한셋의 최소권한화**(위협모델
+R1). 계정 전역 스캔에서 유일하게 미처리로 남은 실제 과제이며, 본인 관리자 접근을
+줄이는 작업이라 break-glass 설계와 함께 신중히 다룬다.
 
 ## 디렉터리
 
 ```
 terraform/
   bootstrap/      state 버킷만 만드는 1회성 스택 (로컬 state)
-  guardrails/     계정 가드레일, CloudTrail, CMK, 탐지 알람
+  guardrails/     계정 가드레일, CloudTrail, CMK, 탐지 알람, GuardDuty, Access Analyzer
   site/           S3 + CloudFront + OAC + WAF + OIDC 배포 역할
 site/             Astro 정적 사이트
+prowler-mutelist.yaml     계정 전역 Prowler 억제 (분류·근거·기한)
+.trivyignore.yaml         의존성 취약점 기한 억제 (expired_at)
 scripts/
-  preflight.sh            로컬 도구 점검
-  status.sh               현재 배포 상태 요약
-  pin-actions.py          액션 SHA 고정·일관성 검사 (--check / --write / --align)
-  check-suppressions.py   억제 주석의 근거와 기한 검사
+  preflight.sh                로컬 도구 점검
+  status.sh                   현재 배포 상태 요약
+  pin-actions.py              액션 SHA 고정·일관성 검사 (--check / --write / --align)
+  check-suppressions.py       Checkov 억제 주석의 근거와 기한 검사
+  check-prowler-mutelist.py   Prowler mutelist 억제의 분류·근거·기한 검사
 docs/
   adr/                    설계 결정 기록
   evidence/               주차별 검증 증적 (자격증명 보고서, 배포 로그, WAF 차단 기록)
+  threat-model.md         STRIDE 위협 모델 + DFD + 잔여위험 레지스터
+  runbook.md              인시던트 대응 런북 (알림원별 플레이북)
+  demo.md                 공격→탐지→알림→대응 데모 시나리오
+  prowler-triage.md       계정 전역 Prowler 63건 전수 분류
   security-policy.md      차단 기준
   security-backlog.md     수용한 위험과 재검토 시점
-  security-testing.md     스캐너 검증 런북
+  security-testing.md     스캐너 검증 런북 (사례 1–14)
   week-01-checklist.md    1주차 완료 체크리스트
 .github/workflows/
   ci.yml        시크릿 스캔, Terraform 정적 검사, 액션 고정 검사
   security.yml  Semgrep, Trivy
   codeql.yml    CodeQL
-  iac.yml       Checkov, tflint, 억제 주석 검사
-  deploy.yml    main 머지 시 S3 동기화 + CloudFront 무효화
+  iac.yml       Checkov, tflint, 억제 주석 검사, Prowler mutelist 억제 검사
+  deploy.yml    main 머지 시 빌드·SBOM·서명·검증 후 S3 동기화 + CloudFront 무효화
+  oidc-trust-boundary-test.yml / deploy-role-boundary-test.yml / signing-tamper-test.yml
+                방어를 공격으로 검증하는 워크플로 (거부가 성공)
 ```
 
 ## 시작하기
@@ -276,6 +337,7 @@ pip install -r requirements-ci.txt
 checkov --directory . --framework terraform --compact --quiet
 TFLINT_CONFIG_FILE=$PWD/.tflint.hcl tflint --recursive --format compact
 python3 scripts/check-suppressions.py
+python3 scripts/check-prowler-mutelist.py
 python3 scripts/pin-actions.py --check
 ```
 
