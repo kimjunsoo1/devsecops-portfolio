@@ -5,7 +5,7 @@ pubDate: 2026-11-10
 tags: ['AWS', 'Detection', 'KMS']
 ---
 
-7주차에 GuardDuty를 켜고, 심각도 4.0 이상 발견만 EventBridge → SNS → 메일로 보내도록
+실험 환경에 GuardDuty를 켜고, 심각도 4.0 이상 발견만 EventBridge → SNS → 메일로 보내도록
 연결했습니다. 콘솔은 전부 초록이었습니다. 그래서 **실제로 샘플 위협을 발사해 봤습니다.**
 
 ```bash

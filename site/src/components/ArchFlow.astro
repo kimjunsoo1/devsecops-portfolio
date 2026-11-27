@@ -1,8 +1,8 @@
 ---
-import { devsecops } from '../lib/data';
+import { research } from '../lib/data';
 ---
 <div class="flow" aria-label="배포 아키텍처">
-  {devsecops.arch.map((n, i) => (
+  {research.lab.arch.map((n, i) => (
     <>
       {i > 0 && <span class="link" aria-hidden="true"></span>}
       <div class:list={['node', { gate: n.kind === 'gate' }]}>

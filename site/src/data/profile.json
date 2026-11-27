@@ -5,7 +5,7 @@
     "initials": "JK",
     "role": "Penetration Tester → DevSecOps",
     "title": "김준수 · Penetration Tester & DevSecOps",
-    "description": "10년 차 모의해킹·취약점진단 전문가 김준수의 포트폴리오와 DevSecOps 구축 기록.",
+    "description": "10년 차 모의해킹·취약점진단 전문가 김준수의 포트폴리오와 DevSecOps 연구 노트.",
     "url": "https://d3jnlp3megsao6.cloudfront.net",
     "email": "junshae1125@gmail.com",
     "github": "https://github.com/kimjunsoo1",
@@ -14,81 +14,197 @@
     "motto": "Just do it."
   },
   "nav": [
-    { "href": "/", "label": "Home" },
-    { "href": "/work/", "label": "Work" },
-    { "href": "/projects/devsecops-portfolio/", "label": "DevSecOps" },
-    { "href": "/blog/", "label": "Blog" },
-    { "href": "/about/", "label": "About" }
+    {
+      "href": "/",
+      "label": "Home"
+    },
+    {
+      "href": "/work/",
+      "label": "Work"
+    },
+    {
+      "href": "/research/",
+      "label": "Research"
+    },
+    {
+      "href": "/blog/",
+      "label": "Blog"
+    },
+    {
+      "href": "/about/",
+      "label": "About"
+    }
   ],
   "intro": [
     "2016년 SK쉴더스에 입사한 뒤 지금까지 한 회사에서 취약점진단과 모의해킹을 해 왔습니다. 지금은 EQST에서 그룹 관계사와 외부 고객사 프로젝트의 PM과 실무 수행을 함께 맡고 있습니다.",
     "가장 많은 시간을 들인 분야는 애플리케이션 취약점 점검과 모의해킹이고, 이를 바탕으로 고객사의 위협을 분석하는 일이 강점입니다. 소스코드 정적 분석 경험이 많아 개발자의 코드를 빠르게 읽고, 자동화 도구가 놓치는 비즈니스 로직 결함을 찾는 데 익숙합니다.",
-    "최근에는 클라우드와 AI 환경으로 범위를 넓히면서, 진단 결과가 개발·배포 과정에서 다시 생기지 않도록 DevSecOps를 직접 구성하고 있습니다. 목표는 고도화되는 환경에서 기업의 위협을 먼저 식별하고 리스크를 헷지하는 DevSecOps 전문가입니다."
+    "최근에는 클라우드와 AI 환경으로 범위를 넓히면서, 진단에서 반복해 보던 문제가 개발·배포 과정 안에서 구조적으로 막히려면 무엇이 필요한지 DevSecOps를 연구하고 직접 실험하고 있습니다. 목표는 고도화되는 환경에서 기업의 위협을 먼저 식별하고 리스크를 헷지하는 DevSecOps 전문가입니다."
   ],
   "facts": [
-    { "value": "10년", "label": "2016.10 입사 이후 진단·모의해킹" },
-    { "value": "25+", "label": "PM · 실무로 참여한 주요 사업" },
-    { "value": "5곳", "label": "KISA · KISIA 등 외부 강의 기관" },
-    { "value": "4개", "label": "SW 보안약점 진단원 등 자격증" }
+    {
+      "value": "10년",
+      "label": "2016.10 입사 이후 진단·모의해킹"
+    },
+    {
+      "value": "25+",
+      "label": "PM · 실무로 참여한 주요 사업"
+    },
+    {
+      "value": "5곳",
+      "label": "KISA · KISIA 등 외부 강의 기관"
+    },
+    {
+      "value": "4개",
+      "label": "SW 보안약점 진단원 등 자격증"
+    }
   ],
   "skills": [
     {
       "no": "01",
       "title": "애플리케이션 점검 · 모의해킹",
-      "items": ["웹(WEB/API) · 모바일(Android/iOS) 진단", "인증 · 결제 등 핵심 기능 심화 분석", "IoT 진단"],
+      "items": [
+        "웹(WEB/API) · 모바일(Android/iOS) 진단",
+        "인증 · 결제 등 핵심 기능 심화 분석",
+        "IoT 진단"
+      ],
       "proof": "이커머스 · 플랫폼 기업"
     },
     {
       "no": "02",
       "title": "기업 위협 분석",
-      "items": ["자산 구조 기반 공격 경로 · 영향도 분석", "컴플라이언스 밖 사각지대 위협 식별", "AD 침투 · BAS 시나리오 · SIEM 고도화"],
+      "items": [
+        "자산 구조 기반 공격 경로 · 영향도 분석",
+        "컴플라이언스 밖 사각지대 위협 식별",
+        "AD 침투 · BAS 시나리오 · SIEM 고도화"
+      ],
       "proof": "플랫폼 기업 · 법무법인 · 통신사"
     },
     {
       "no": "03",
       "title": "정적 분석",
-      "items": ["소스코드 수동 진단 (보안약점 진단원)", "개발자 코드 · 비즈니스 로직 분석", "자동화 도구가 놓치는 결함 탐지"],
+      "items": [
+        "소스코드 수동 진단 (보안약점 진단원)",
+        "개발자 코드 · 비즈니스 로직 분석",
+        "자동화 도구가 놓치는 결함 탐지"
+      ],
       "proof": "이커머스 · 플랫폼 기업 · 해외 법인"
     },
     {
       "no": "04",
       "title": "인프라 · 클라우드 · AI",
-      "items": ["클라우드(AWS/GCP/Azure) 진단 체계 수립", "Kubernetes · Service Mesh 보안", "인프라 점검 · AI/MCP 보안"],
+      "items": [
+        "클라우드(AWS/GCP/Azure) 진단 체계 수립",
+        "Kubernetes · Service Mesh 보안",
+        "인프라 점검 · AI/MCP 보안"
+      ],
       "proof": "자사 · 이커머스 · 통신사"
     },
     {
       "no": "05",
       "title": "DevSecOps · 아키텍처",
-      "items": ["CI/CD 보안 게이트 (SAST/SCA/시크릿/IaC)", "Zero Trust · Cloud Native 보안 컨설팅", "GitHub Actions · OIDC 기반 AWS 배포"],
-      "proof": "통신사 차세대 시스템 · 개인 프로젝트"
+      "items": [
+        "CI/CD 보안 게이트 설계 (SAST/SCA/시크릿/IaC)",
+        "Keyless 신원 · 공급망 서명 · 탐지 연구",
+        "Zero Trust · Cloud Native 보안 컨설팅"
+      ],
+      "proof": "통신사 차세대 시스템 · DevSecOps 연구"
     }
   ],
   "career": [
-    { "period": "2016 — 2021", "title": "On-site AppSec", "body": "이커머스 · 플랫폼 기업 상주. 상용 오픈 전 웹 · 모바일 · 소스코드 진단, 보안 가이드라인 제·개정, 주니어 개발자 대상 개발 보안 교육." },
-    { "period": "2021 — 2023", "title": "Wider scope", "body": "사내 클라우드 진단 체계 수립. IoT, 디지털 보험사(금융), 해외 법인 등 그룹 밖 고객과 해외로 범위 확장." },
-    { "period": "2022 — 2025", "title": "Offensive depth", "body": "통신 · 미디어 그룹사 테마별 모의해킹, 법무법인 · 플랫폼 기업 Active Directory 침투테스트." },
-    { "period": "2024 —", "title": "Threat analysis", "body": "플랫폼 기업 위협 식별 — OA · IDC · Cloud · DevOps 자산과 공격 경로, 컴플라이언스 사각지대 분석." },
-    { "period": "2025 — 2026", "title": "Architecture", "body": "통신사 BAS 모의해킹 · SIEM 고도화, 통신사 차세대 시스템 구축 프로젝트 보안 아키텍처 설계." }
+    {
+      "period": "2016 — 2021",
+      "title": "On-site AppSec",
+      "body": "이커머스 · 플랫폼 기업 상주. 상용 오픈 전 웹 · 모바일 · 소스코드 진단, 보안 가이드라인 제·개정, 주니어 개발자 대상 개발 보안 교육."
+    },
+    {
+      "period": "2021 — 2023",
+      "title": "Wider scope",
+      "body": "사내 클라우드 진단 체계 수립. IoT, 디지털 보험사(금융), 해외 법인 등 그룹 밖 고객과 해외로 범위 확장."
+    },
+    {
+      "period": "2022 — 2025",
+      "title": "Offensive depth",
+      "body": "통신 · 미디어 그룹사 테마별 모의해킹, 법무법인 · 플랫폼 기업 Active Directory 침투테스트."
+    },
+    {
+      "period": "2024 —",
+      "title": "Threat analysis",
+      "body": "플랫폼 기업 위협 식별 — OA · IDC · Cloud · DevOps 자산과 공격 경로, 컴플라이언스 사각지대 분석."
+    },
+    {
+      "period": "2025 — 2026",
+      "title": "Architecture",
+      "body": "통신사 BAS 모의해킹 · SIEM 고도화, 통신사 차세대 시스템 구축 프로젝트 보안 아키텍처 설계."
+    }
   ],
   "certs": [
-    { "date": "2022.10", "name": "소프트웨어 보안약점 진단원", "issuer": "행정안전부" },
-    { "date": "2016.05", "name": "정보처리기사", "issuer": "한국산업인력공단" },
-    { "date": "2013.11", "name": "리눅스마스터 1급", "issuer": "한국정보통신진흥협회" },
-    { "date": "2011.12", "name": "네트워크관리사 2급", "issuer": "한국정보통신자격협회" }
+    {
+      "date": "2022.10",
+      "name": "소프트웨어 보안약점 진단원",
+      "issuer": "행정안전부"
+    },
+    {
+      "date": "2016.05",
+      "name": "정보처리기사",
+      "issuer": "한국산업인력공단"
+    },
+    {
+      "date": "2013.11",
+      "name": "리눅스마스터 1급",
+      "issuer": "한국정보통신진흥협회"
+    },
+    {
+      "date": "2011.12",
+      "name": "네트워크관리사 2급",
+      "issuer": "한국정보통신자격협회"
+    }
   ],
   "education": [
-    { "period": "2011.03 — 2017.02", "title": "호원대학교 사이버수사경찰학부", "body": "시스템보안 전공 학사. 졸업 프로젝트로 Java 강의실 원격 뷰어 · 제어 프로그램, 교내 창업경진대회에서 Android 앱 '호원헬퍼' 개발 · 운영." }
+    {
+      "period": "2011.03 — 2017.02",
+      "title": "호원대학교 사이버수사경찰학부",
+      "body": "시스템보안 전공 학사. 졸업 프로젝트로 Java 강의실 원격 뷰어 · 제어 프로그램, 교내 창업경진대회에서 Android 앱 '호원헬퍼' 개발 · 운영."
+    }
   ],
   "teaching": [
-    { "period": "2026.06 — 10", "org": "파인더갭 · KISA", "topic": "버그헌팅 실습훈련 '헌팅마스터' — 웹 · 모바일 버그바운티" },
-    { "period": "2025.07", "org": "KISIA", "topic": "AI를 활용한 보안전문가 양성과정 — 웹 보안 및 모의해킹" },
-    { "period": "2025.06 — 08", "org": "KIRD", "topic": "하계 사이버보안 직무교육 — 생성형 AI 보안 취약점 및 대응전략" },
-    { "period": "2023.04", "org": "KISA", "topic": "K-Shield 웹 공격 및 대응 기법 — 웹 취약점 진단" },
-    { "period": "2023.03 —", "org": "인포섹 아카데미 · 오픈이지", "topic": "클라우드 기반 보안 실무 — 웹 · 클라우드 취약점 진단" }
+    {
+      "period": "2026.06 — 10",
+      "org": "파인더갭 · KISA",
+      "topic": "버그헌팅 실습훈련 '헌팅마스터' — 웹 · 모바일 버그바운티"
+    },
+    {
+      "period": "2025.07",
+      "org": "KISIA",
+      "topic": "AI를 활용한 보안전문가 양성과정 — 웹 보안 및 모의해킹"
+    },
+    {
+      "period": "2025.06 — 08",
+      "org": "KIRD",
+      "topic": "하계 사이버보안 직무교육 — 생성형 AI 보안 취약점 및 대응전략"
+    },
+    {
+      "period": "2023.04",
+      "org": "KISA",
+      "topic": "K-Shield 웹 공격 및 대응 기법 — 웹 취약점 진단"
+    },
+    {
+      "period": "2023.03 —",
+      "org": "인포섹 아카데미 · 오픈이지",
+      "topic": "클라우드 기반 보안 실무 — 웹 · 클라우드 취약점 진단"
+    }
   ],
   "writing": [
-    { "title": "EQST Insight 헤드라인 (SK쉴더스)", "url": "https://www.skshieldus.com/report/eqstInsight/headline2606.html" },
-    { "title": "주요 Cloud IoT Native 서비스 현황 및 보안 고려사항 (SK쉴더스)", "url": "https://www.skshieldus.com/security-insights/reports/Cloud_IoT_Native" },
-    { "title": "개인 IT · 보안 노트 (Tistory)", "url": "https://junshae.tistory.com/" }
+    {
+      "title": "EQST Insight 헤드라인 (SK쉴더스)",
+      "url": "https://www.skshieldus.com/report/eqstInsight/headline2606.html"
+    },
+    {
+      "title": "주요 Cloud IoT Native 서비스 현황 및 보안 고려사항 (SK쉴더스)",
+      "url": "https://www.skshieldus.com/security-insights/reports/Cloud_IoT_Native"
+    },
+    {
+      "title": "개인 IT · 보안 노트 (Tistory)",
+      "url": "https://junshae.tistory.com/"
+    }
   ]
 }
