@@ -1,13 +1,13 @@
 ---
-import { devsecops } from '../lib/data';
+import { research } from '../lib/data';
 const icon: Record<string, string> = { pass: '✓', run: '●', wait: '○' };
-const run = devsecops.run;
+const run = research.lab.run;
 const passed = run.filter((p) => p.status === 'pass').length;
 ---
 <div class="run-card" role="img" aria-label={`배포 파이프라인 ${run.length}단계 중 ${passed}단계 통과`}>
   <div class="bar"><i></i><i></i><i></i></div>
   <div class="head">
-    <span><b>deploy.yml</b> · main</span>
+    <span><b>lab · deploy.yml</b> · main</span>
     <span>{passed}/{run.length} passed</span>
   </div>
   {run.map((p) => (

@@ -1,0 +1,139 @@
+---
+import Base from '../layouts/Base.astro';
+import PipelineCard from '../components/PipelineCard.astro';
+import ArchFlow from '../components/ArchFlow.astro';
+import { site, research as r } from '../lib/data';
+import { getPosts } from '../lib/posts';
+import PostList from '../components/PostList.astro';
+
+const posts = await getPosts();
+const areaTitle = Object.fromEntries(r.areas.map((a) => [a.no, a.title]));
+const statusLabel: Record<string, string> = { active: '연구 중', exploring: '탐색 중' };
+---
+<Base title="Research" description="공격자 관점의 DevSecOps 연구 — 보안 게이트, Keyless 신원, 공급망 무결성, 공격 검증, 탐지, AI·MCP 보안">
+  <section class="page-head">
+    <div class="wrap">
+      <p class="eyebrow"><b>~/</b>research — DevSecOps</p>
+      <h1>공격자의 관점으로<br />DevSecOps를 연구합니다</h1>
+      <p>{r.intro}</p>
+      <p class="method-line mono">{r.method}</p>
+    </div>
+  </section>
+
+  <section class="facts">
+    <div class="wrap">
+      {r.stats.map((s) => <div class="fact"><strong>{s.value}</strong><span>{s.label}</span></div>)}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Research questions</p><h2>붙잡고 있는 질문</h2></div></div>
+      <ol class="questions">
+        {r.questions.map((q, i) => (
+          <li>
+            <span class="qn">Q{i + 1}</span>
+            <div><h3>{q.q}</h3><p>{q.a}</p></div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="areas">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Research areas</p><h2>연구 주제</h2><p class="section-lead">현장(FIELD)에서 본 문제를 랩(LAB)에서 구현하고 공격해 봅니다.</p></div></div>
+      <div class="areas">
+        {r.areas.map((a) => (
+          <article class="card area" id={`area-${a.no}`}>
+            <div class="area-top"><span class="no">AREA {a.no}</span><span class:list={['status', a.status]}>{statusLabel[a.status]}</span></div>
+            <h3>{a.title}</h3>
+            <p class="area-q">{a.question}</p>
+            <ul class="ticks">{a.approach.map((x) => <li>{x}</li>)}</ul>
+            <p class="finding"><b>발견</b>{a.finding}</p>
+            <div class="tags">
+              {a.sources.map((s) => {
+                const [kind, ...rest] = s.split(' ');
+                return <span class:list={['chip', 'src', kind.toLowerCase()]}><b>{kind}</b> {rest.join(' ')}</span>;
+              })}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="experiments">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Experiments</p><h2>주요 실험</h2><p class="section-lead">가설을 세우고 직접 공격해 결과를 확인했습니다. 전부 본인 계정 · 본인 리포지토리 대상입니다.</p></div></div>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>ID</th><th>주제</th><th>가설</th><th>결과</th></tr></thead>
+          <tbody>
+            {r.experiments.map((e) => (
+              <tr>
+                <td class="mono nowrap">{e.id}</td>
+                <td><b>{e.title}</b><br /><span class="muted small">AREA {e.area} · {areaTitle[e.area]}</span></td>
+                <td>{e.hypothesis}</td>
+                <td class="ok">{e.result}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="lab">
+    <div class="wrap">
+      <div class="section-head">
+        <div><p class="eyebrow">Lab</p><h2>실험 환경 — 이 웹사이트가 실험대입니다</h2><p class="section-lead">{r.lab.summary}</p></div>
+        <a href={site.repo} rel="noopener noreferrer">GitHub ↗</a>
+      </div>
+      <div class="feature">
+        <div class="feature-body">
+          <p class="eyebrow">Prevention</p>
+          <div class="tbl">
+            <table>
+              <thead><tr><th>게이트</th><th>차단 기준</th></tr></thead>
+              <tbody>{r.lab.gates.map((g) => <tr><td class="mono">{g.gate}</td><td>{g.block}</td></tr>)}</tbody>
+            </table>
+          </div>
+          <p class="eyebrow">Detection</p>
+          <ul class="ticks">{r.lab.detect.map((x) => <li>{x}</li>)}</ul>
+        </div>
+        <div class="feature-art lab-art">
+          <ArchFlow />
+          <PipelineCard />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Principles</p><h2>연구하며 정리한 원칙</h2></div></div>
+      <div class="timeline">
+        {r.principles.map((x) => <div class="tl-item"><span class="period">{x.q}</span><p>{x.a}</p></div>)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Next</p><h2>다음 연구</h2></div></div>
+      <div class="next-grid">
+        {r.next.map((n, i) => (
+          <article class="card"><span class="no">NEXT {String(i + 1).padStart(2, '0')}</span><h3>{n.title}</h3><p>{n.body}</p></article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><div><p class="eyebrow">Notes</p><h2>연구 노트</h2></div><a href="/blog/">전체 글 →</a></div>
+      <PostList posts={posts.slice(0, 3)} />
+    </div>
+  </section>
+</Base>

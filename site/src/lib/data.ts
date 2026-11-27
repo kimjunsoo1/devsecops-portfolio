@@ -1,6 +1,6 @@
 import profile from '../data/profile.json';
 import work from '../data/work.json';
-import devsecops from '../data/devsecops.json';
+import research from '../data/research.json';
 
 export const site = profile.site;
-export { profile, work, devsecops };
+export { profile, work, research };

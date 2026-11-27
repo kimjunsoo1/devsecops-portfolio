@@ -4,12 +4,12 @@ import PostList from '../../components/PostList.astro';
 import { getPosts } from '../../lib/posts';
 const posts = await getPosts();
 ---
-<Base title="Blog" description="DevSecOps 파이프라인 구축 기록과 보안 진단 노트">
+<Base title="Blog" description="DevSecOps 연구 노트와 보안 진단 기록">
   <section class="page-head">
     <div class="wrap">
       <p class="eyebrow"><b>~/</b>blog — {posts.length} posts</p>
-      <h1>구축 기록</h1>
-      <p>만들면서 막힌 것, 결정한 것, 진단 현장에서 배운 것을 적습니다.</p>
+      <h1>연구 노트</h1>
+      <p>실험하면서 막힌 것, 결정한 것, 진단 현장에서 배운 것을 적습니다.</p>
     </div>
   </section>
   <section class="section">

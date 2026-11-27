@@ -1,0 +1,136 @@
+{
+  "intro": "10년 동안 고객사 시스템을 공격하며 본 문제는 대부분 같은 곳에서 반복됐습니다. 코드에 들어간 비밀, 너무 넓은 권한, 아무도 다시 보지 않는 위험 수용, 설정만 해 두고 검증하지 않은 통제. 그래서 지금은 이 문제들이 개발과 배포 과정 안에서 구조적으로 막히려면 무엇이 필요한지 연구하고 있습니다.",
+  "method": "현장(FIELD)에서 본 문제를 출발점으로 삼고, 직접 만든 실험 환경(LAB)에서 통제를 구현한 뒤, 공격자 입장에서 다시 뚫어 보며 검증합니다.",
+  "stats": [
+    { "value": "6", "label": "연구 주제" },
+    { "value": "14", "label": "통제를 공격으로 검증한 실험" },
+    { "value": "10", "label": "랩 파이프라인의 보안 게이트" },
+    { "value": "0", "label": "CI에 저장된 장기 액세스 키" }
+  ],
+  "questions": [
+    { "q": "보안 게이트가 개발 속도를 해치지 않으면서도 우회되지 않으려면 어떻게 설계해야 할까?", "a": "도구 수보다 책임 분리와, 예외에 기한을 붙이는 거버넌스가 더 중요했습니다." },
+    { "q": "CI/CD가 통째로 장악되더라도 피해 반경을 어디까지 줄일 수 있을까?", "a": "장기 키를 없애고 신뢰 경계를 브랜치 단위까지 좁히면, 피해를 배포 대상 하나에 가둘 수 있었습니다." },
+    { "q": "'설정했다'와 '막힌다'의 차이를 어떻게 증명할까?", "a": "모든 통제는 공격으로 검증하고, 그 검증 자체를 회귀 테스트로 남깁니다." }
+  ],
+  "areas": [
+    {
+      "no": "01",
+      "title": "보안 게이트 설계와 거버넌스",
+      "status": "active",
+      "question": "게이트를 늘리지 않고도 우회되지 않고, 사람의 기억에 기대지 않는 게이트는 어떻게 만들까?",
+      "approach": ["도구마다 책임 영역 하나 (SAST · SCA · 시크릿 · IaC)", "PASS / WARN / BLOCK 기준 정의", "억제에는 근거와 재검토 기한을 강제", "액션은 커밋 SHA로 고정 + 자동 갱신"],
+      "finding": "억제 기한이 만료되자 게이트가 실제로 머지를 막았고, 미뤄 둔 WAF 도입을 강제했습니다. 예외 관리도 코드로 해야 지켜집니다.",
+      "sources": ["FIELD 통신사 CI/CD 보안 컨설팅", "LAB PR 게이트 10종"]
+    },
+    {
+      "no": "02",
+      "title": "Keyless 신원과 신뢰 경계",
+      "status": "active",
+      "question": "파이프라인과 워크로드는 비밀 없이 어떻게 자신을 증명하고, 그 신뢰는 어디까지 좁혀야 할까?",
+      "approach": ["GitHub OIDC → 단기 자격증명", "sub 클레임을 리포 · 브랜치까지 완전 일치", "배포 역할에 권한 경계 적용", "SPIFFE / SPIRE 워크로드 신원 · Vault 비밀 순환 검토"],
+      "finding": "브랜치 이름만 달라도 역할을 받을 수 없게 하자, CI가 장악돼도 피해가 사이트 버킷과 배포 1개에 갇혔습니다.",
+      "sources": ["FIELD Zero Trust · Cloud Native 가이드", "LAB OIDC 신뢰 경계 실험"]
+    },
+    {
+      "no": "03",
+      "title": "소프트웨어 공급망 무결성",
+      "status": "active",
+      "question": "빌드된 산출물이 정말 내가 검토한 코드에서 나왔다는 것을 배포 직전에 어떻게 확인할까?",
+      "approach": ["SBOM 생성 (CycloneDX)", "cosign keyless 서명 + 투명성 로그", "배포 전 서명 신원 완전 일치 검증", "Zero-CVE 기반 이미지 (RHEL Image Mode) 실습"],
+      "finding": "빌드와 업로드 사이에서 파일을 1바이트만 바꿔도 검증이 실패하고 배포가 멈췄습니다.",
+      "sources": ["FIELD SBOM · SCA · CVE 영향도 평가", "LAB 서명 · 변조 실험"]
+    },
+    {
+      "no": "04",
+      "title": "방어를 공격으로 검증하기",
+      "status": "active",
+      "question": "통제가 문서와 콘솔에서만 존재하는지, 실제 공격 앞에서도 존재하는지 어떻게 구분할까?",
+      "approach": ["내 파이프라인을 대상으로 한 침투 테스트", "WAF 룰을 실제 공격 페이로드로 확인", "엄격한 CSP 적용 전후 위반 여부 검증", "검증을 워크플로로 남겨 회귀 테스트화"],
+      "finding": "설정을 마친 통제도 공격해 보기 전까지는 가설일 뿐입니다. 검증 코드가 스스로 SAST 게이트에 걸린 일도 있었습니다.",
+      "sources": ["FIELD 10년 모의해킹 · AD 침투", "LAB 파이프라인 · 엣지 공격 실험"]
+    },
+    {
+      "no": "05",
+      "title": "탐지와 대응",
+      "status": "active",
+      "question": "예방이 뚫렸을 때 알 수 있는가? 그리고 '초록색 대시보드'는 무엇을 보장하는가?",
+      "approach": ["CloudTrail · 메트릭 필터 · 알람", "GuardDuty → EventBridge → SNS 경로", "구간별 지표로 측정하는 알림 디버깅", "STRIDE 위협 모델 · 대응 런북"],
+      "finding": "콘솔은 전부 초록이었지만 알림은 0통이었습니다. 원인은 KMS 키 정책 공백이었고, 측정해서 찾았습니다.",
+      "sources": ["FIELD BAS 시나리오 · SIEM 고도화", "LAB GuardDuty 알림 실험"]
+    },
+    {
+      "no": "06",
+      "title": "AI 에이전트 · MCP 보안",
+      "status": "exploring",
+      "question": "도구를 호출하는 AI 에이전트에게 권한을 어디까지 줘야 하고, 그 경계는 어떻게 검증할까?",
+      "approach": ["MCP · RAG 접근 통제 설계", "Prompt Injection 위협 검토", "LLM 애플리케이션 취약점 진단 기준", "에이전트 도구 권한의 최소화"],
+      "finding": "AI 기능도 결국 입력 검증과 권한 경계의 문제입니다. 모의해킹에서 쓰던 질문을 그대로 적용해 보고 있습니다.",
+      "sources": ["FIELD AI Security 가이드 작성", "FIELD 생성형 AI 보안 강의"]
+    }
+  ],
+  "lab": {
+    "summary": "연구를 직접 해 보기 위한 실험 환경으로 이 웹사이트를 씁니다. 사이트는 작지만, 코드가 배포되기까지의 경로 전체를 실제 AWS 위에 만들어 두고 통제를 하나씩 붙이고 공격합니다.",
+    "arch": [
+      { "name": "GitHub (main)", "sub": "PR", "kind": "" },
+      { "name": "PR 게이트 10종", "sub": "secrets · SAST · SCA · IaC · policy", "kind": "gate" },
+      { "name": "GitHub Actions", "sub": "build · SBOM · cosign 서명", "kind": "" },
+      { "name": "서명 검증 게이트", "sub": "신원 완전 일치해야 배포", "kind": "gate" },
+      { "name": "OIDC → 배포 롤", "sub": "repo · ref 스코프 · 권한 경계", "kind": "" },
+      { "name": "S3 (비공개)", "sub": "OAC 전용", "kind": "" },
+      { "name": "CloudFront + WAF", "sub": "strict CSP · 보안 헤더", "kind": "" }
+    ],
+    "run": [
+      { "stage": "secrets", "tool": "gitleaks", "status": "pass" },
+      { "stage": "sast", "tool": "Semgrep · CodeQL", "status": "pass" },
+      { "stage": "sca", "tool": "Trivy (HIGH/CRITICAL)", "status": "pass" },
+      { "stage": "iac", "tool": "Checkov · tflint · Trivy", "status": "pass" },
+      { "stage": "policy", "tool": "억제 기한 · 액션 SHA 고정", "status": "pass" },
+      { "stage": "sbom", "tool": "syft · CycloneDX", "status": "pass" },
+      { "stage": "sign", "tool": "cosign keyless (Rekor)", "status": "pass" },
+      { "stage": "verify", "tool": "서명 신원 일치 검사", "status": "pass" },
+      { "stage": "deploy", "tool": "OIDC → S3 · CloudFront", "status": "pass" }
+    ],
+    "gates": [
+      { "gate": "gitleaks", "block": "시크릿 발견 시 무조건" },
+      { "gate": "Semgrep", "block": "ERROR 등급" },
+      { "gate": "CodeQL", "block": "JS/TS 데이터플로" },
+      { "gate": "Trivy (취약점 · 시크릿)", "block": "HIGH/CRITICAL, 전체 경로" },
+      { "gate": "Trivy (오설정)", "block": "HIGH/CRITICAL, terraform 제외" },
+      { "gate": "Checkov", "block": "terraform 발견사항 1건" },
+      { "gate": "tflint", "block": "경고 1건 (all preset + aws)" },
+      { "gate": "억제 주석 검사", "block": "근거 30자 미만 · 기한 누락 · 만료" },
+      { "gate": "액션 고정 검사", "block": "SHA 미고정 · 액션별 SHA 불일치" },
+      { "gate": "Prowler mutelist 검사", "block": "분류 · 근거 · 기한 누락 또는 만료" }
+    ],
+    "detect": [
+      "CloudTrail 멀티리전 · CMK 암호화 · 로그 파일 검증",
+      "메트릭 필터 → 알람 → SNS → 메일",
+      "GuardDuty (sev ≥ 4) → EventBridge → SNS",
+      "Access Analyzer · Prowler 계정 전역 스캔 전수 분류"
+    ]
+  },
+  "experiments": [
+    { "id": "EXP-01", "area": "02", "title": "OIDC 신뢰 경계", "hypothesis": "다른 브랜치의 토큰으로 배포 역할을 받을 수 있다", "result": "거부 — ref만 달라도 막힘" },
+    { "id": "EXP-02", "area": "02", "title": "배포 역할 권한 경계", "hypothesis": "CI를 장악하면 권한을 넓혀 측면 이동할 수 있다", "result": "거부 — 자기 권한 확대 포함 AccessDenied" },
+    { "id": "EXP-03", "area": "04", "title": "S3 OAC 우회", "hypothesis": "CloudFront를 거치지 않고 버킷에 직접 접근할 수 있다", "result": "거부 — 직접 · 리스팅 · 평문 전부 403" },
+    { "id": "EXP-04", "area": "03", "title": "산출물 변조", "hypothesis": "빌드와 업로드 사이에 파일을 바꿔도 배포된다", "result": "거부 — 서명 검증 실패, 배포 중단" },
+    { "id": "EXP-05", "area": "04", "title": "WAF 실공격 확인", "hypothesis": "관리형 룰이 LFI · XSS · Log4Shell 요청을 막는다", "result": "확인 — 3종 BLOCK, 정상 요청 200" },
+    { "id": "EXP-06", "area": "05", "title": "탐지 경로 실측", "hypothesis": "GuardDuty 고위험 발견은 메일로 도착한다", "result": "실패 → 원인 규명 — KMS 키 정책 공백 수정 후 도착" },
+    { "id": "EXP-07", "area": "01", "title": "억제 기한 강제", "hypothesis": "기한이 지난 위험 수용은 게이트가 다시 막는다", "result": "확인 — 만료 시 머지 차단, WAF 도입으로 이어짐" },
+    { "id": "EXP-08", "area": "04", "title": "Strict CSP", "hypothesis": "클라이언트 JS 0KB라면 'unsafe-inline' 없이 CSP를 걸 수 있다", "result": "확인 — 인라인 script · style 0개로 적용" }
+  ],
+  "principles": [
+    { "q": "장기 비밀을 없앤다", "a": "저장된 키는 언젠가 유출됩니다. 신원은 실행 시점에 짧게 증명하게 합니다." },
+    { "q": "신뢰는 좁게, 완전 일치로", "a": "와일드카드 대신 리포지토리와 브랜치까지 정확히 지정합니다." },
+    { "q": "도구마다 책임 하나", "a": "같은 판단을 두 도구에서 관리하지 않아야 예외도 한 곳에서 관리됩니다." },
+    { "q": "예외에는 기한을", "a": "위험 수용은 근거와 재검토 날짜가 있는 약속이고, 기한이 지나면 기계가 다시 막습니다." },
+    { "q": "초록은 증거가 아니다", "a": "스캐너의 통과와 콘솔의 정상 표시는 '깨끗함'과 '안 봄'을 구분하지 못합니다. 공격으로 확인합니다." },
+    { "q": "비용도 위협 모델의 일부", "a": "작은 예산이 NAT · EKS 대신 WAF와 탐지에 돈을 쓰게 만들었습니다. 제약이 아키텍처를 정합니다." }
+  ],
+  "next": [
+    { "title": "DAST를 배포 후 단계에", "body": "정적 검사만으로는 배포된 결과를 보지 못합니다. ZAP baseline을 배포 직후 게이트로 붙이는 실험." },
+    { "title": "사람의 관리자 권한 최소화", "body": "남은 가장 큰 위험인 SSO 관리자 권한을 쪼개고, break-glass 접근을 알람과 함께 설계." },
+    { "title": "워크로드 신원 랩", "body": "Kubernetes 환경에서 SPIFFE / SPIRE와 mTLS로 서비스 간 신뢰를 구성하고 공격해 보기." },
+    { "title": "AI 에이전트 권한 경계", "body": "MCP 도구 호출에 최소 권한과 승인 단계를 두고, Prompt Injection으로 경계를 시험." }
+  ]
+}
